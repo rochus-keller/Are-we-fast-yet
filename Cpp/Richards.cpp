@@ -30,6 +30,8 @@ static TaskControlBlock* const NO_TASK = 0;
 
 // compared with 2'880us for pure C implementation with Boehm GC
 
+// NOTE that the dynamic_cast eat up a lot of performance; i.e. static_cast requires 2002us and dynamic_cast 3'721us!
+
 class RBObject : public Object {
 public:
     static Packet* append(Packet* packet, Packet* queueHead);

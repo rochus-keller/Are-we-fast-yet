@@ -14,6 +14,10 @@ using namespace som;
 
 // NOTE:
 // 12000 runs with no memory management (just new, no delete): 19us
+
+// NOTE that alloc/dealloc eats up most of the time/performance; a more efficient allocator
+// than the standard one would help
+
 class Sym {
 
     int hash;

@@ -32,6 +32,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
+// NOTE that alloc/dealloc eats up most of the time/performance; a more efficient allocator
+// than the standard one would help
+
 #include "Havlak.h"
 #include "som/Vector.h"
 #include "som/Set.h"
