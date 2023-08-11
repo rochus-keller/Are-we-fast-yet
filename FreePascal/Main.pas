@@ -70,6 +70,8 @@ program Main;
 	
 begin
 	//runOnce;
+		dorun('Bounce', 1500, 1);
+		dorun('List', 1500, 1);
 		dorun('Mandelbrot', 500, 1);
 		dorun('NBody', 250000, 1);
 		dorun('Permute', 1000, 1);

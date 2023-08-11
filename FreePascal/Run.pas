@@ -48,7 +48,7 @@ type
 
 implementation
 uses
-	unix, math, Mandelbrot, NBody, Permute, Queens, Sieve, Storage, Towers;
+	unix, math, Mandelbrot, NBody, Permute, Queens, Sieve, Storage, Towers, Bounce, List;
 	
 	function getSuiteFromName(name: string): PBenchmark;
 	var bench: PBenchmark;
@@ -61,6 +61,8 @@ uses
 		if name = 'Sieve' then bench := new (PSieve,init);
 		if name = 'Storage' then bench := new (PStorage,init);
 		if name = 'Towers' then bench := new (PTowers,init);
+		if name = 'Bounce' then bench := new (PBounce,init);
+		if name = 'List' then bench := new (PList,init);
 		exit(bench);
 	end;
 
