@@ -57,9 +57,9 @@ int Bounce::benchmark()
     };
 
     Random::reset();
-    int ballCount = 100;
+    static const int ballCount = 100;
     int bounces   = 0;
-    Ball* balls = new Ball[ballCount];
+    Ball balls[ballCount];
 
     for (int i = 0; i < 50; i++) {
         for (int j = 0; j < ballCount; j++) {
@@ -68,6 +68,5 @@ int Bounce::benchmark()
             }
         }
     }
-    delete[] balls;
     return bounces;
 }

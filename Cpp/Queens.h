@@ -28,10 +28,10 @@
 
 class Queens : public Benchmark {
 
-    bool* freeMaxs;
-    bool* freeRows;
-    bool* freeMins;
-    int*     queenRows;
+    bool freeMaxs[16];
+    bool freeRows[8];
+    bool freeMins[16];
+    int  queenRows[8];
 
 public:
     int benchmark();

@@ -28,7 +28,7 @@
 
 class Permute : public Benchmark {
   int count;
-  int* v;
+  int v[6];
 public:
   int benchmark();
 

@@ -25,12 +25,11 @@
 
 int Sieve::benchmark()
 {
-    const int count = 5000;
-    bool* flags = new bool[count];
+    static const int count = 5000;
+    bool flags[count];
     for( int i = 0; i < count; i++ )
         flags[i] = true;
     const int res = sieve(flags, count);
-    delete[] flags;
     return res;
 }
 

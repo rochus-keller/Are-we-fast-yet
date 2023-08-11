@@ -26,9 +26,7 @@
 int Permute::benchmark()
 {
     count = 0;
-    v     = new int[6];
     permute(6);
-    delete[] v;
     return count;
 }
 

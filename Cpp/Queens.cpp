@@ -35,10 +35,6 @@ int Queens::benchmark()
 bool Queens::queens()
 {
     // stack allocation would save 2us of 165us, and further deviate from the original code.
-    freeRows  = new bool[8];
-    freeMaxs  = new bool[16];
-    freeMins  = new bool[16];
-    queenRows = new int[8];
 
     for( int i = 0; i < 8; i++ )
     {
@@ -52,11 +48,6 @@ bool Queens::queens()
     }
 
     const bool res = placeQueen(0);
-
-    delete[] freeRows;
-    delete[] freeMaxs;
-    delete[] freeMins;
-    delete[] queenRows;
 
     return res;
 }

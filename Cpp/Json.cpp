@@ -86,16 +86,13 @@ class JsonObject : public JsonValue {
 
     class HashIndexTable {
 
-        int* hashTable;
-        int len;
+        enum { len = 32 };
+        int hashTable[len];
     public:
         HashIndexTable() {
-            len = 32;
-            hashTable = new int[len]; // must be a power of two
         }
         ~HashIndexTable()
         {
-            delete[] hashTable;
         }
 
         void add(const std::string& name, int index) {
