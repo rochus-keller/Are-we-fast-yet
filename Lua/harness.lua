@@ -67,12 +67,12 @@ function run:report_benchmark ()
 end
 
 function run:print_result (run_time)
-    print(("%s: iterations=1 runtime: %.0fus"):format(self.name, run_time))
+    -- RK print(("%s: iterations=1 runtime: %.0fus"):format(self.name, run_time))
 
 end
 
 function run:print_total ()
-    print(("Total Runtime: %.0fus"):format(self.total))
+    -- RK print(("Total Runtime: %.0fus"):format(self.total))
 end
 
 end -- object run
