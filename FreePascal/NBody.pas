@@ -49,38 +49,38 @@ implementation
 	procedure NBodySystem.advance(dt: double);
 		var i,j: longint;
 		    dx,dy,dz,dSquared,distance,mag: double;
-		    iBody,jBody: TBody;
+		    iBody,jBody: ^TBody;
 	begin
 	   for i := 0 to numberOfBodies-1 do
 	   begin
-		  iBody := self.bodies[i];
+		  iBody := @self.bodies[i];
 		  for j := i + 1 to numberOfBodies-1 do
 		  begin
-		     jBody := self.bodies[j];
-		     dx := iBody.x - jBody.x;
-		     dy := iBody.y - jBody.y;
-		     dz := iBody.z - jBody.z;
+		     jBody := @self.bodies[j];
+		     dx := iBody^.x - jBody^.x;
+		     dy := iBody^.y - jBody^.y;
+		     dz := iBody^.z - jBody^.z;
 
 		     dSquared := dx * dx + dy * dy + dz * dz;
 		     distance := sqrt(dSquared);
 		     mag := dt / (dSquared * distance);
 
-		     iBody.vx := iBody.vx - (dx * jBody.mass * mag);
-		     iBody.vy := iBody.vy - (dy * jBody.mass * mag);
-		     iBody.vz := iBody.vz - (dz * jBody.mass * mag);
+		     iBody^.vx := iBody^.vx - (dx * jBody^.mass * mag);
+		     iBody^.vy := iBody^.vy - (dy * jBody^.mass * mag);
+		     iBody^.vz := iBody^.vz - (dz * jBody^.mass * mag);
 
-		     jBody.vx := jBody.vx + (dx * iBody.mass * mag);
-		     jBody.vy := jBody.vy + (dy * iBody.mass * mag);
-		     jBody.vz := jBody.vz + (dz * iBody.mass * mag);
+		     jBody^.vx := jBody^.vx + (dx * iBody^.mass * mag);
+		     jBody^.vy := jBody^.vy + (dy * iBody^.mass * mag);
+		     jBody^.vz := jBody^.vz + (dz * iBody^.mass * mag);
 		  end;
 		end;
 
 	   	for i := 0 to numberOfBodies-1 do
 	   	begin
-		  iBody := self.bodies[i];
-		  iBody.x := iBody.x + dt * iBody.vx;
-		  iBody.y := iBody.y + dt * iBody.vy;
-		  iBody.z := iBody.z + dt * iBody.vz;
+		  iBody := @self.bodies[i];
+		  iBody^.x := iBody^.x + dt * iBody^.vx;
+		  iBody^.y := iBody^.y + dt * iBody^.vy;
+		  iBody^.z := iBody^.z + dt * iBody^.vz;
 	    end;
 	end;
 
@@ -223,12 +223,10 @@ implementation
     end;
 
 	function verifyResult2(result: double; innerIterations: longint):boolean;
-	const epsilon = 0.00005; // TODO 0.00000000000000005; // 5e-17
-		// looks like the precision is only single, not double; somewhere precision gets lost
+	const epsilon = 0.00000000000000005; // 5e-17
 	begin
 		if innerIterations = 250000 then exit(abs(result) - 0.1690859889909308 < epsilon);
 		if innerIterations = 1 then exit(abs(result) - 0.16907495402506745 < epsilon);
-													 //0.16907516382852447
 
 		// Checkstyle: stop
 		Write('No verification result for ');
