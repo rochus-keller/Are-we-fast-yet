@@ -20,8 +20,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *)
- 
+
+// this is a modified version of Storage3 by BeniBela, 
+// see https://forum.lazarus.freepascal.org/index.php/topic,64275.msg488425.html#msg488425
+// original version average ~2500us instead of 4373us
+// removed constructor/desctructor because no longer of use; average goes to ~2700us
+// setting t.sub := nil by end of TStorage.benchmark(), average down to ~2400us !!! 
+// added a recursive proc which sets t.sub := nil for all Tree; average goes up to 3100us; undone
+// replaced Tree record by object keyword; average goes to ~2460us
+// removed mode and advancedrecord, average still the same
+
 unit Storage;
+
 interface
 uses Benchmark;
 
@@ -31,7 +41,7 @@ type
 		    constructor init;
 		    destructor deinit; virtual;
 		    function benchmark(): longint; virtual;
-		    function verifyResult(result: longint): boolean; virtual;
+		    function verifyResult(xresult: longint): boolean; virtual;
 		end;
 		
 implementation
@@ -39,25 +49,13 @@ implementation
 	
 	type 
 		TreePtr = ^Tree;
-		TreeList = array of TreePtr;
-		Tree = object 
-					sub: TreeList; 
-					constructor init;
-					destructor deinit; 
+		Tree = object
+          			type TreeList = array of Tree;
+          	   public
+					sub: TreeList;
 			   end;
 	var
 		count: longint;
-		
-	constructor Tree.init;
-	begin
-	end;
-	
-	destructor Tree.deinit;
-	var i: longint;
-	begin
-		for i := 0 to length(sub)-1 do
-			dispose(sub[i],deinit);
-	end;
 	
     constructor TStorage.init;
     begin
@@ -69,7 +67,7 @@ implementation
     	inherited deinit;
     end;
     
-    procedure buildTreeDepth(depth: longint; var t: TreeList);
+    procedure buildTreeDepth(depth: longint; var t: Tree.TreeList);
     var len, i: longint;
     begin
 		count += 1;
@@ -77,8 +75,6 @@ implementation
 			begin
 				len := Random_next() mod 10 + 1;
 				setLength(t,len);
-				for i := 0 to len-1 do
-					new(t[i],init);
 			end 
 		else 
 			begin
@@ -86,8 +82,7 @@ implementation
 				setLength(t,len);
 				for i := 0 to len-1 do
 				begin
-					new(t[i],init);
-				    buildTreeDepth(depth - 1, t[i]^.sub);
+				    buildTreeDepth(depth - 1, t[i].sub);
 				end;
 			end;
     end;
@@ -97,15 +92,14 @@ implementation
     begin
         Random_reset();
     	count := 0;
-    	t.init();
     	buildTreeDepth(7, t.sub);
-    	t.deinit();
+    	t.sub := nil;
     	exit(count);
     end;
     
-    function TStorage.verifyResult(result: longint): boolean;
+    function TStorage.verifyResult(xresult: longint): boolean;
     begin
-    	exit(5461 = result);
+    	exit(5461 = xresult);
     end;
 
 end.
