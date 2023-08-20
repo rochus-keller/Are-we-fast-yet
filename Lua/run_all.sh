@@ -1,4 +1,4 @@
-SOM=luajit
+SOM=./lua
 
 
 #this is the original order from rebench.conf; the iteration count is original up to Havlak which is 1500 in the original

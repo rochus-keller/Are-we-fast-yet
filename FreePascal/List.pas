@@ -35,40 +35,30 @@ type
 		end;
 		
 implementation
+uses RefCounted;
 
+	// NOTE: refCount was first implemented directly in Element with local addRef/release procs; average 165us;
+	// now there is a separate module and reusable supertype TRefCounted; average now 166us.
 type
 	ElemPtr = ^Element;
-	Element = object
+	Element = object(TRefCounted)
 			constructor init(v: longint);
-			destructor deinit();
+			destructor deinit(); virtual;
 			procedure setNext(ptr: ElemPtr);
 			function getNext():ElemPtr;
 			function length():longint;
 		private
-			val, refCount: longint;
+			val: longint;
 			next: ElemPtr;
 		end;
-
-	procedure addRef(ptr: ElemPtr);
-	begin
-		if ptr = nil then exit;
-		ptr^.refCount += 1;
-	end;
-	
-	procedure release(ptr: ElemPtr);
-	begin
-		if ptr = nil then exit;
-		ptr^.refCount -= 1;
-		if ptr^.refCount <= 0 then dispose(ptr,deinit);
-	end;
 
 	constructor Element.init(v: longint);
 	begin
 		val := v;
-		refCount := 0;
+		inherited init;
 	end;
 	
-	destructor Element.deinit();
+	destructor Element.deinit(); 
 	begin
 		release(next);
 	end;
