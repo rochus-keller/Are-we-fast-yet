@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-#include <som/Interfaces.h>
+#include "som/Interfaces.h"
 
 typedef struct RedBlackTree RedBlackTree;
 

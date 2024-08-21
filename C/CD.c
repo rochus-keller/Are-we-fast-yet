@@ -24,6 +24,7 @@
 #include "CD.h"
 #include "RedBlackTree.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include "som/Vector.h"
 #include <assert.h>
