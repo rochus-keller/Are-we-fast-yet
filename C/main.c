@@ -21,6 +21,7 @@
 
 #include "Run.h"
 #include <assert.h>
+#include <stdio.h>
 #include "RedBlackTree.h"
 
 static int compare(const Bytes l, const Bytes r)

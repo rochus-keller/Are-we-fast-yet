@@ -373,7 +373,7 @@ static JsonNumber* JsonNumber_create(const char* str)
     return me;
 }
 
-static const char JsonNumber_toString(JsonNumber* me) {
+static const char* JsonNumber_toString(JsonNumber* me) {
     return me->string;
 }
 
@@ -428,7 +428,7 @@ static JsonLiteral* JsonLiteral_create(const char* value)
     return me;
 }
 
-static const char JsonLiteral_toString(JsonLiteral* me) {
+static const char* JsonLiteral_toString(JsonLiteral* me) {
     return me->value;
 }
 
@@ -491,7 +491,7 @@ static void JsonPureStringParser_init(JsonPureStringParser* me, const char* stri
     me->current = 0;
 }
 
-static JsonPureStringParser_deinit(JsonPureStringParser* me)
+static void JsonPureStringParser_deinit(JsonPureStringParser* me)
 {
     if( me->captureBuffer.buf )
         free(me->captureBuffer.buf);
@@ -827,7 +827,7 @@ static bool verifyResult(Benchmark* me, int r)
     JsonValue* tmp = JsonObject_get(result->vtbl->asObject(result),"head");
     if (!tmp->vtbl->isObject(tmp))
         goto cleanup;
-    tmp = tmp = JsonObject_get(result->vtbl->asObject(result),"operations");
+    tmp = JsonObject_get(result->vtbl->asObject(result),"operations");
     if (!tmp->vtbl->isArray(tmp))
         goto cleanup;
     tmp = JsonObject_get(result->vtbl->asObject(result),"operations");

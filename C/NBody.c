@@ -198,10 +198,10 @@ static bool verifyResult2(double result, int innerIterations)
 {
     const double epsilon = 0.00000000000000005; // 5e-17
     if (innerIterations == 250000) {
-        return abs(result) - 0.1690859889909308 < epsilon;
+        return fabs(result) - 0.1690859889909308 < epsilon;
     }
     if (innerIterations == 1) {
-        return abs(result) - 0.16907495402506745 < epsilon;
+        return fabs(result) - 0.16907495402506745 < epsilon;
     }
 
     // Checkstyle: stop

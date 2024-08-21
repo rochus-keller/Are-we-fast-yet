@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-#include <Benchmark.h>
+#include "Benchmark.h"
 #include <setjmp.h>
 
 typedef struct Run {
