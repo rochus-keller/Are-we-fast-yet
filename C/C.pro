@@ -28,7 +28,10 @@ SOURCES += \
     Json.c \
     som/Vector.c \
     CD.c \
-    RedBlackTree.c
+    RedBlackTree.c \
+    Havlak.c \
+    som/Set.c \
+    som/Dictionary.c
 
 HEADERS += \
     Benchmark.h \
@@ -49,6 +52,9 @@ HEADERS += \
     som/Vector.h \
     som/Interfaces.h \
     CD.h \
-    RedBlackTree.h
+    RedBlackTree.h \
+    Havlak.h \
+    som/Dictionary.h \
+    som/Set.h
 
 

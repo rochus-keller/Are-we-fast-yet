@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include "RedBlackTree.h"
+#include "som/Dictionary.h"
 
 static int compare(const Bytes l, const Bytes r)
 {
@@ -69,6 +70,59 @@ static void testrb()
     RedBlackTree_forEach(t, iter, 0);
 
     RedBlackTree_dispose(t);
+}
+
+static int hash(const Bytes key)
+{
+    int* k = key;
+    return *k;
+}
+
+static void testdic()
+{
+    Dictionary* t = Dictionary_create(sizeof(int),sizeof(double),hash);
+    int key;
+    double value;
+
+    double* res;
+
+    key = 3; value = 3.456;
+    Dictionary_atPut(t, &key, &value);
+    key = 2; value = 2.345;
+    Dictionary_atPut(t, &key, &value);
+    key = 5; value = 5.678;
+    Dictionary_atPut(t, &key, &value);
+
+    key = 2; value = 1.234;
+    Dictionary_atPut(t, &key, &value);
+
+
+    for( int i = 10; i < 30; i++ ) {
+        value = i;
+        Dictionary_atPut(t, &i, &value);
+    }
+
+    key = 9;
+    res = Dictionary_at(t,&key);
+    key = 3;
+    res = Dictionary_at(t,&key);
+    key = 2;
+    res = Dictionary_at(t,&key);
+
+    Vector* keys = Vector_createDefault(sizeof(int));
+    Dictionary_getKeys(t, keys);
+
+    Vector* vals = Vector_createDefault(sizeof(double));
+    Dictionary_getValues(t, vals);
+
+    assert(Vector_size(keys) == Vector_size(vals));
+
+    for( int i = 0; i < Vector_size(keys); i++ )
+        printf("key=%d val=%f\n", *(int*)Vector_at(keys,i), *(double*)Vector_at(vals,i) );
+
+    Vector_dispose(keys);
+    Vector_dispose(vals);
+    Dictionary_dispose(t);
 }
 
 static void run( const char* what, int numIterations, int innerIterations )

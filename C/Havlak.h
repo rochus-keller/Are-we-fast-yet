@@ -1,8 +1,7 @@
-#ifndef _REDBLACKTREE_H
-#define _REDBLACKTREE_H
+#ifndef _HAVLAK_H
+#define _HAVLAK_H
 
-/* This code is derived from the SOM benchmarks, see AUTHORS.md file.
- *
+/* Copyright (c) 2001-2016 Stefan Marr
  * Copyright (c) 2024 Rochus Keller <me@rochus-keller.ch> (for C99 migration)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,26 +20,24 @@
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
+ * THE SOFTWARE.*/
+// Copyright 2011 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#include "som/Interfaces.h"
+#include "Benchmark.h"
 
-typedef struct RedBlackTree RedBlackTree;
-
-typedef int (*RedBlackTree_compare)(const Bytes l, const Bytes r); // +1, 0, -1: l>r, l==r, l<r
-
-extern RedBlackTree* RedBlackTree_create(int keySize, int valueSize, RedBlackTree_compare f);
-
-extern void RedBlackTree_dispose(RedBlackTree* me);
-
-extern Bytes RedBlackTree_put(RedBlackTree*, const Bytes key, const Bytes value);
-
-extern Bytes RedBlackTree_remove(RedBlackTree*, const Bytes key);
-
-extern Bytes RedBlackTree_get(RedBlackTree*, const Bytes key);
-
-extern void RedBlackTree_forEach(RedBlackTree* me, KeyValueIterator iter, void* data );
+extern Benchmark* Havlak_create();
 
 
-#endif // _REDBLACKTREE_H
+#endif // _HAVLAK_H

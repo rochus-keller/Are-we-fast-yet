@@ -28,6 +28,9 @@
 
 typedef unsigned char* Bytes;
 
-typedef void (*Vector_iter)(const Bytes value, void* data);
+typedef void (*ValueIterator)(const Bytes value, void* data);
+typedef bool (*TestIterator)(const Bytes value, void* data);
+
+typedef void (*KeyValueIterator)(const Bytes key, const Bytes value, void* data);
 
 #endif // SOM_INTERFACES_H

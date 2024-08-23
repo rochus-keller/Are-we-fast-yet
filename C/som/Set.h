@@ -1,5 +1,5 @@
-#ifndef _REDBLACKTREE_H
-#define _REDBLACKTREE_H
+#ifndef SOM_SET_H
+#define SOM_SET_H
 
 /* This code is derived from the SOM benchmarks, see AUTHORS.md file.
  *
@@ -24,23 +24,18 @@
  * THE SOFTWARE.
  */
 
-#include "som/Interfaces.h"
+#include "Vector.h"
 
-typedef struct RedBlackTree RedBlackTree;
+typedef struct Set Set;
+typedef Set IdentitySet;
 
-typedef int (*RedBlackTree_compare)(const Bytes l, const Bytes r); // +1, 0, -1: l>r, l==r, l<r
+extern Set* Set_create(int elemSize);
+extern void Set_dispose(Set* me);
+extern int Set_size(Set* me);
+extern void Set_forEach(Set* me, ValueIterator iter, void* data);
+extern bool Set_hasSome(Set* me, TestIterator iter, void* data);
+extern void Set_removeAll(Set* me);
+extern bool Set_contains(Set* me, const Bytes obj);
+extern void Set_add(Set* me, const Bytes obj);
 
-extern RedBlackTree* RedBlackTree_create(int keySize, int valueSize, RedBlackTree_compare f);
-
-extern void RedBlackTree_dispose(RedBlackTree* me);
-
-extern Bytes RedBlackTree_put(RedBlackTree*, const Bytes key, const Bytes value);
-
-extern Bytes RedBlackTree_remove(RedBlackTree*, const Bytes key);
-
-extern Bytes RedBlackTree_get(RedBlackTree*, const Bytes key);
-
-extern void RedBlackTree_forEach(RedBlackTree* me, KeyValueIterator iter, void* data );
-
-
-#endif // _REDBLACKTREE_H
+#endif // SOM_SET_H

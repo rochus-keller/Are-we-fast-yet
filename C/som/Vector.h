@@ -50,7 +50,10 @@ extern int Vector_size(Vector* me);
 
 extern int Vector_capacity(Vector* me);
 
-extern void Vector_forEach(Vector* me, Vector_iter iter, void* data );
+extern void Vector_forEach(Vector* me, ValueIterator iter, void* data );
 
+extern bool Vector_hasSome(Vector* me, TestIterator iter, void* data );
+
+extern void Vector_expand(Vector* me, int newLength);
 
 #endif // SOM_VECTOR_H

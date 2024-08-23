@@ -7,8 +7,8 @@ commit 770c6649ed8e by 2020-04-03
 
 The implementation was directly derived from the C++ implementation from https://github.com/rochus-keller/Are-we-fast-yet/tree/main/Cpp.
 
-So far, all benchmarks beside DeltaBlue and Havlak have been migrated; the remaining benchmarks are work in progress.
+So far, all benchmarks besides DeltaBlue have been migrated; the remaining benchmark is work in progress.
 
-Benchmark results can be found in https://github.com/rochus-keller/Oberon/tree/master/testcases/Are-we-fast-yet, see Are-we-fast-yet_results.ods and Are-we-fast-yet_results_linux.pdf.
+Benchmark results can be found in https://github.com/rochus-keller/Oberon/tree/master/testcases/Are-we-fast-yet, see Are-we-fast-yet_results.ods (Linux i386 tab).
 
-As expected, the C99 implementation runs about as fast as the C++ one (the latter is about 10% faster). Richards and Json run significantly faster than C++ (factor 2 to 3) which is surprising and subject to further analysis. Compared to the C99 version generated from Oberon+, the native C99 version is about 10% faster, i.e. virtually the same performance.
+As expected, the C99 implementation runs about as fast as the C++ one (the latter is about 2% faster in geomean). Richards and Json run significantly faster (factor 2 to 3) and Havlak significantly slower (factor 3) than C++, which is surprising and subject to further analysis. Compared to the C99 version generated from Oberon+, the native C99 version is only about 20% faster.

@@ -1,5 +1,5 @@
-#ifndef _REDBLACKTREE_H
-#define _REDBLACKTREE_H
+#ifndef SOM_DICTIONARY_H
+#define SOM_DICTIONARY_H
 
 /* This code is derived from the SOM benchmarks, see AUTHORS.md file.
  *
@@ -24,23 +24,27 @@
  * THE SOFTWARE.
  */
 
-#include "som/Interfaces.h"
+#include "Vector.h"
 
-typedef struct RedBlackTree RedBlackTree;
+typedef struct Dictionary Dictionary;
+typedef Dictionary IdentityDictionary;
 
-typedef int (*RedBlackTree_compare)(const Bytes l, const Bytes r); // +1, 0, -1: l>r, l==r, l<r
+typedef int (*Dictionary_hash)(const Bytes key);
 
-extern RedBlackTree* RedBlackTree_create(int keySize, int valueSize, RedBlackTree_compare f);
+extern Dictionary* Dictionary_create(int keyLen, int valueLen, Dictionary_hash hash);
 
-extern void RedBlackTree_dispose(RedBlackTree* me);
+extern void Dictionary_dispose(Dictionary* me);
 
-extern Bytes RedBlackTree_put(RedBlackTree*, const Bytes key, const Bytes value);
+extern void Dictionary_removeAll(Dictionary* me);
 
-extern Bytes RedBlackTree_remove(RedBlackTree*, const Bytes key);
+extern Bytes Dictionary_at(Dictionary* me, const Bytes key);
 
-extern Bytes RedBlackTree_get(RedBlackTree*, const Bytes key);
+extern bool Dictionary_containsKey(Dictionary* me, const Bytes key);
 
-extern void RedBlackTree_forEach(RedBlackTree* me, KeyValueIterator iter, void* data );
+extern void Dictionary_atPut(Dictionary* me, const Bytes key, const Bytes value);
 
+extern void Dictionary_getKeys(Dictionary* me, Vector* keys);
 
-#endif // _REDBLACKTREE_H
+extern void Dictionary_getValues(Dictionary* me, Vector* values);
+
+#endif // SOM_DICTIONARY_H

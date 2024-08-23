@@ -178,7 +178,7 @@ void sort(int i, int j, const Comparator<E>& c) {
 
 #endif
 
-static void expand(Vector* me, int newLength)
+void Vector_expand(Vector* me, int newLength)
 {
     if( newLength <= me->length )
         return;
@@ -186,7 +186,7 @@ static void expand(Vector* me, int newLength)
     if( newLength > 0 )
     {
         me->storage = realloc(me->storage, newLength * me->elemSize);
-        memset(me->storage + me->length, 0, newLength - me->length);
+        memset(me->storage + me->length*me->elemSize, 0, (newLength - me->length) * me->elemSize );
     }
     me->length = newLength;
 }
@@ -198,7 +198,7 @@ static void enlarge(Vector* me, int idx)
         newLength *= 2;
         newLength += 50;
     }
-    expand(me, newLength);
+    Vector_expand(me, newLength);
 }
 
 Bytes Vector_at(Vector* me, int idx) {
@@ -263,9 +263,9 @@ Vector* Vector_create(int elemSize, int len)
     v->elemSize = elemSize;
     v->firstIdx = 0;
     v->lastIdx = 0;
-    v->length = len;
+    v->length = 0;
     v->storage = 0;
-    expand(v, len);
+    Vector_expand(v, len);
     return v;
 }
 
@@ -283,9 +283,19 @@ Vector*Vector_createDefault(int elemSize)
     return Vector_create(elemSize,0);
 }
 
-void Vector_forEach(Vector* me, Vector_iter iter, void* data)
+void Vector_forEach(Vector* me, ValueIterator iter, void* data)
 {
     for (int i = me->firstIdx; i < me->lastIdx; i++) {
         iter(&me->storage[i*me->elemSize], data);
     }
+}
+
+bool Vector_hasSome(Vector* me, TestIterator iter, void* data)
+{
+    for (int i = me->firstIdx; i < me->lastIdx; i++) {
+        if (iter(&me->storage[i*me->elemSize], data) ) {
+            return true;
+        }
+    }
+    return false;
 }

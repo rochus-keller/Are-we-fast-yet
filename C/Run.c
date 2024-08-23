@@ -38,8 +38,8 @@
 #include "Richards.h"
 #include "Json.h"
 #include "CD.h"
-#if 0
 #include "Havlak.h"
+#if 0
 #include "DeltaBlue.h"
 #endif
 
@@ -108,9 +108,9 @@ Benchmark *Run_getSuiteFromName(const char* name)
         return Json_create();
     if( strcmp(name,"CD")== 0 )
         return CD_create();
+    if( strcmp(name,"Havlak")== 0 )
+        return Havlak_create();
 #if 0
-    if( name == "Havlak" )
-        return new Havlak();
     if( name == "DeltaBlue" )
         return new DeltaBlue();
 #endif

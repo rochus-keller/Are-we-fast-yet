@@ -459,7 +459,7 @@ Bytes RedBlackTree_get(RedBlackTree* me, const Bytes key)
     return node->value;
 }
 
-void RedBlackTree_forEach(RedBlackTree* me, RedBlackTree_iter iter, void* data) {
+void RedBlackTree_forEach(RedBlackTree* me, KeyValueIterator iter, void* data) {
     if (me->root == 0) {
         return;
     }
