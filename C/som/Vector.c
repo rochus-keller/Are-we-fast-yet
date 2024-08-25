@@ -59,61 +59,13 @@ Vector<E>& operator=( const Vector<E>& rhs)
     return *this;
 }
 
+#endif
 
-void forEach(ForEachInterface<E>& fn) {
-    for (int i = firstIdx; i < lastIdx; i++) {
-        fn.apply(storage[i]);
-    }
+static void swap(Bytes storage2, int i, int j) {
+    assert(0); // "NotImplemented"
 }
 
-bool hasSome(TestInterface<E>& fn) const {
-    for (int i = firstIdx; i < lastIdx; i++) {
-        if (fn.test(storage[i])) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool remove(const E& obj) {
-    if( length == 0 )
-        return false;
-
-    E* newArray = new E[length];
-
-    struct Iterator : public ForEachInterface<E>
-    {
-        Iterator(E* a, const E* o):newArray(a),newLast(0),found(false),obj(o){}
-        E* newArray;
-        int newLast;
-        const E* obj;
-        bool found;
-        void apply(const E& it)
-        {
-            if (it == *obj) {
-                found = true;
-            } else {
-                newArray[newLast] = it;
-                newLast++;
-            }
-        }
-    } it(newArray, &obj);
-    forEach(it);
-
-    delete[] storage;
-    storage  = newArray;
-    lastIdx  = it.newLast;
-    firstIdx = 0;
-    return it.found;
-}
-
-void sort( const Comparator<E>& c) {
-    if (size() > 0) {
-        sort(firstIdx, lastIdx - 1, c);
-    }
-}
-
-void sort(int i, int j, const Comparator<E>& c) {
+static void sort(Vector* me, int i, int j, CompareIterator c, void* data) {
 #if 0
     if (c == 0) {
         defaultSort(i, j);
@@ -125,27 +77,27 @@ void sort(int i, int j, const Comparator<E>& c) {
         return;
     }
 
-    E di = storage[i];
-    E dj = storage[j];
+    Bytes di = &me->storage[i*me->elemSize];
+    Bytes dj = &me->storage[j*me->elemSize];
 
-    if (c.compare(di, dj) > 0) {
-        swap(storage, i, j);
-        E tt = di;
+    if (c(di, dj, data) > 0) {
+        swap(me->storage, i, j);
+        Bytes tt = di;
         di = dj;
         dj = tt;
     }
 
     if (n > 2) {
         int ij = (i + j) / 2;
-        E dij = storage[ij];
+        Bytes dij = &me->storage[ij*me->elemSize];
 
-        if (c.compare(di, dij) <= 0) {
-            if (c.compare(dij, dj) > 0) {
-                swap(storage, j, ij);
+        if (c(di, dij, data) <= 0) {
+            if (c(dij, dj, data) > 0) {
+                swap(me->storage, j, ij);
                 dij = dj;
             }
         } else {
-            swap(storage, i, ij);
+            swap(me->storage, i, ij);
             dij = di;
         }
 
@@ -154,29 +106,32 @@ void sort(int i, int j, const Comparator<E>& c) {
             int l = j - 1;
 
             while (true) {
-                while (k <= l && c.compare(dij, storage[l]) <= 0) {
+                while (k <= l && c(dij, &me->storage[l*me->elemSize], data) <= 0) {
                     l -= 1;
                 }
 
                 k += 1;
-                while (k <= l && c.compare( storage[k], dij) <= 0) {
+                while (k <= l && c( &me->storage[k*me->elemSize], dij, data) <= 0) {
                     k += 1;
                 }
 
                 if (k > l) {
                     break;
                 }
-                swap(storage, k, l);
+                swap(me->storage, k, l);
             }
 
-            sort(i, l, c);
-            sort(k, j, c);
+            sort(me, i, l, c, data);
+            sort(me, k, j, c, data);
         }
     }
 }
 
-
-#endif
+void Vector_sort( Vector* me, CompareIterator c, void* data) {
+    if (Vector_size(me) > 0) {
+        sort(me, me->firstIdx, me->lastIdx - 1, c, data);
+    }
+}
 
 void Vector_expand(Vector* me, int newLength)
 {
@@ -298,4 +253,53 @@ bool Vector_hasSome(Vector* me, TestIterator iter, void* data)
         }
     }
     return false;
+}
+
+struct Vector_remove_Iterator {
+    Bytes newArray;
+    int newLast;
+    Bytes obj;
+    int elemSize;
+    bool found;
+};
+
+static void Vector_remove_iter(const Bytes value, void* data) {
+    struct Vector_remove_Iterator* me = data;
+    if ( memcmp(value, me->obj, me->elemSize) == 0 ) {
+        me->found = true;
+    } else {
+        memcpy(me->newArray + me->newLast*me->elemSize, value, me->elemSize);
+        me->newLast++;
+    }
+}
+
+bool Vector_remove(Vector* me, const Bytes obj) {
+    if( me->length == 0 )
+        return false;
+
+    Bytes newArray = malloc(me->length*me->elemSize);
+
+    struct Vector_remove_Iterator iter;
+    iter.newArray = newArray;
+    iter.found = false;
+    iter.obj = obj;
+    iter.newLast = 0;
+    iter.elemSize = me->elemSize;
+
+    Vector_forEach(me, Vector_remove_iter, &iter);
+
+    free(me->storage);
+    me->storage  = newArray;
+    me->lastIdx  = iter.newLast;
+    me->firstIdx = 0;
+    return iter.found;
+}
+
+Vector* Vector_copy(Vector* in)
+{
+    Vector* me = Vector_create(in->elemSize,in->length);
+    me->firstIdx = in->firstIdx;
+    me->lastIdx = in->lastIdx;
+    memcpy(me->storage, in->storage, in->length * in->elemSize);
+    return me;
 }

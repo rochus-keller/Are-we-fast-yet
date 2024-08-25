@@ -33,4 +33,6 @@ typedef bool (*TestIterator)(const Bytes value, void* data);
 
 typedef void (*KeyValueIterator)(const Bytes key, const Bytes value, void* data);
 
+typedef int (*CompareIterator)(const Bytes lhs, const Bytes rhs, void* data);
+
 #endif // SOM_INTERFACES_H

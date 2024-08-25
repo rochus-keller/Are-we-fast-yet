@@ -31,7 +31,8 @@ SOURCES += \
     RedBlackTree.c \
     Havlak.c \
     som/Set.c \
-    som/Dictionary.c
+    som/Dictionary.c \
+    DeltaBlue.c
 
 HEADERS += \
     Benchmark.h \
@@ -55,6 +56,7 @@ HEADERS += \
     RedBlackTree.h \
     Havlak.h \
     som/Dictionary.h \
-    som/Set.h
+    som/Set.h \
+    DeltaBlue.h
 
 

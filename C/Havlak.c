@@ -47,7 +47,6 @@
 typedef struct BasicBlock BasicBlock;
 typedef struct ControlFlowGraph ControlFlowGraph;
 typedef struct BasicBlockEdge BasicBlockEdge;
-typedef struct ControlFlowGraph ControlFlowGraph;
 typedef struct SimpleLoop SimpleLoop;
 typedef struct UnionFindNode UnionFindNode;
 typedef struct LoopStructureGraph LoopStructureGraph;

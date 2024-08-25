@@ -39,13 +39,27 @@
 #include "Json.h"
 #include "CD.h"
 #include "Havlak.h"
-#if 0
 #include "DeltaBlue.h"
-#endif
 
 jmp_buf Run_catch;
 
-#if defined(_WIN32) && !defined(__GNUC__)
+#if defined __ECS_C__ || defined __ECS2_C__
+#include <time.h>
+
+typedef struct timeval {
+    long tv_sec;
+    long tv_usec;
+} timeval;
+
+int gettimeofday(struct timeval * tp, struct timezone * tzp)
+{
+    struct timespec ts;
+    timespec_get(&ts,0);
+    tp->tv_sec = ts.tv_sec;
+    tp->tv_usec = ts.tv_nsec / 1000;
+}
+
+#elif defined(_WIN32) && !defined(__GNUC__)
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
@@ -110,10 +124,8 @@ Benchmark *Run_getSuiteFromName(const char* name)
         return CD_create();
     if( strcmp(name,"Havlak")== 0 )
         return Havlak_create();
-#if 0
-    if( name == "DeltaBlue" )
-        return new DeltaBlue();
-#endif
+    if( strcmp(name,"DeltaBlue")== 0 )
+        return DeltaBlue_create();
     return 0;
 }
 

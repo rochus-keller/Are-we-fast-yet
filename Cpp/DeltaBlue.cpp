@@ -656,7 +656,7 @@ public:
 
     bool inputsHasOne(const TestInterface<Variable*>& fn) const {
         return false;
-    };
+    }
 
     // Record the fact that I am unsatisfied.
     void markUnsatisfied() {

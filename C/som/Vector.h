@@ -32,6 +32,8 @@ extern Vector* Vector_create(int elemSize, int len);
 
 extern Vector* Vector_createDefault(int elemSize);
 
+extern Vector* Vector_copy(Vector*);
+
 extern void Vector_dispose(Vector* me);
 
 extern Bytes Vector_at(Vector* me, int idx);
@@ -54,6 +56,10 @@ extern void Vector_forEach(Vector* me, ValueIterator iter, void* data );
 
 extern bool Vector_hasSome(Vector* me, TestIterator iter, void* data );
 
+extern void Vector_sort( Vector* me, CompareIterator c, void* data);
+
 extern void Vector_expand(Vector* me, int newLength);
+
+extern bool Vector_remove(Vector* me, const Bytes obj);
 
 #endif // SOM_VECTOR_H
