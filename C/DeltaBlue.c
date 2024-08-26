@@ -311,7 +311,6 @@ static bool AbstractConstraint_inputsKnown(AbstractConstraint* me, int mark);
 static AbstractConstraint* AbstractConstraint_satisfy(Constraint* me, int mark, Planner* planner);
 
 struct Variable {
-    unsigned int test;
     int value_;       // my value; changed by constraints
     Vector* constraints; // normal constraints that reference me, Vector<Constraint*>
     Constraint* determinedBy; // the constraint that currently determines
@@ -321,11 +320,8 @@ struct Variable {
     bool  stay;        // true if I am a planning-time constant
 };
 
-#define VARIABLE_TEST 0xcacacafe
-
 static Variable* Variable_create() {
     Variable* me = (Variable*)malloc(sizeof(Variable));
-    me->test = VARIABLE_TEST;
     me->value_ = 0;
     me->constraints = Vector_createDefault(sizeof(Constraint*));
     me->determinedBy = 0;
@@ -335,35 +331,24 @@ static Variable* Variable_create() {
     return me;
 }
 
-static void Variable_assure(Variable* me) {
-    if( me == 0 )
-        return;
-    assert(me->test == VARIABLE_TEST);
-}
-
 static void Variable_dispose(Variable* me) {
-    Variable_assure(me);
     Vector_dispose(me->constraints);
     free(me);
 }
 
 static bool Variable_getStay(Variable* me) {
-    Variable_assure(me);
     return me->stay;
 }
 
 static void Variable_setStay(Variable* me, bool v) {
-    Variable_assure(me);
     me->stay = v;
 }
 
 static int Variable_getValue(Variable* me) {
-    Variable_assure(me);
     return me->value_;
 }
 
 static void Variable_setValue(Variable* me,int value) {
-    Variable_assure(me);
     me->value_ = value;
 }
 
@@ -375,38 +360,31 @@ static Variable* Variable_value(int aValue) {
 
 // Add the given constraint to the set of all constraints that refer to me.
 static void Variable_addConstraint(Variable* me, Constraint* c) {
-    Variable_assure(me);
     Vector_append(me->constraints, &c);
 }
 
 static Vector* Variable_getConstraints(Variable* me) {
-    Variable_assure(me);
     return me->constraints;
 }
 
 static Constraint* Variable_getDeterminedBy(Variable* me) {
-    Variable_assure(me);
     return me->determinedBy;
 }
 
 static void Variable_setDeterminedBy(Variable* me, Constraint* c) {
-    Variable_assure(me);
     me->determinedBy = c;
 }
 
 static int Variable_getMark(Variable* me) {
-    Variable_assure(me);
     return me->mark;
 }
 
 static void Variable_setMark(Variable* me, int markValue) {
-    Variable_assure(me);
     me->mark = markValue;
 }
 
 // Remove all traces of c from this variable.
 static void Variable_removeConstraint(Variable* me, Constraint* c) {
-    Variable_assure(me);
     Vector_remove(me->constraints, &c);
     if (me->determinedBy == c) {
         me->determinedBy = 0;
@@ -414,12 +392,10 @@ static void Variable_removeConstraint(Variable* me, Constraint* c) {
 }
 
 static Strength* Variable_getWalkStrength(Variable* me) {
-    Variable_assure(me);
     return me->walkStrength;
 }
 
 static void Variable_setWalkStrength(Variable* me, Strength* strength) {
-    Variable_assure(me);
     me->walkStrength = strength;
 }
 
@@ -503,7 +479,6 @@ static void Planner_removePropagateFrom_iter1(const Bytes value, void* data) {
     Constraint* c = *(Constraint**)value;
     Constraint_recalculate(c);
     Variable* var = Constraint_getOutput(c);
-    Variable_assure(var);
     Vector_append(todo, &var);
 }
 
@@ -529,7 +504,6 @@ static void Planner_removePropagateFrom(Planner* me, Variable* out,
 
     while (!Vector_isEmpty(todo)) {
         Variable* v = *(Variable**)Vector_removeFirst(todo);
-        Variable_assure(v);
 
         for(int i = 0; i < Vector_size(Variable_getConstraints(v)); i++ )
         {
@@ -556,7 +530,6 @@ static void Planner_removePropagateFrom(Planner* me, Variable* out,
 //
 static void Planner_incrementalRemove(Planner* me, Constraint* c) {
     Variable* out = Constraint_getOutput(c);
-    Variable_assure(out);
     Constraint_markUnsatisfied(c);
     Constraint_removeFromGraph(c);
 
@@ -756,7 +729,6 @@ static void UnaryConstraint_recalculate(UnaryConstraint* me) {
 static void UnaryConstraint_init(UnaryConstraint* me, Variable* v, Sym* strength, Planner* planner) {
     AbstractConstraint_init(&me->base,strength);
     me->output = v;
-    Variable_assure(v);
     me->satisfied = false;
     AbstractConstraint_addConstraint(me, planner);
 }
@@ -769,7 +741,6 @@ static bool EditConstraint_isInput(EditConstraint* me) {
 
 
 static EditConstraint* EditConstraint_create(Variable* v, Sym* strength, Planner* planner) {
-    Variable_assure(v);
     EditConstraint* me = Constraint_create(EditConstraintType);
     UnaryConstraint_init(me, v, strength, planner );
     return me;
@@ -778,7 +749,6 @@ static EditConstraint* EditConstraint_create(Variable* v, Sym* strength, Planner
 
 // Install a stay constraint with the given strength on the given variable.
 static StayConstraint* StayConstraint_create(Variable* v, Sym* strength, Planner* planner) {
-    Variable_assure(v);
     StayConstraint* me = Constraint_create(StayConstraintType);
     UnaryConstraint_init(me, v, strength, planner );
     return me;
@@ -908,8 +878,6 @@ static void BinaryConstraint_init(BinaryConstraint* me, Variable* var1, Variable
     AbstractConstraint_init(&me->base, strength);
     me->v1 = var1;
     me->v2 = var2;
-    Variable_assure(var1);
-    Variable_assure(var2);
     me->direction = 0;
 }
 
@@ -1021,7 +989,6 @@ static void AbstractConstraint_destroyConstraint(AbstractConstraint* me, Planner
 static int AbstractConstraint_inputsKnown_iter(const Bytes value, void* data) {
     int* mark = data;
     Variable* v = *(Variable**)value;
-    Variable_assure(v);
     return !(Variable_getMark(v) == *mark || Variable_getStay(v) || Variable_getDeterminedBy(v) == 0);
 }
 
@@ -1033,7 +1000,6 @@ static bool AbstractConstraint_inputsKnown(AbstractConstraint* me, int mark)
 static void AbstractConstraint_satisfy_iter(const Bytes value, void* data) { // ForEachInterface<Variable*>
     int* mark = data;
     Variable* in = *(Variable**)value;
-    Variable_assure(in);
     Variable_setMark(in, *mark);
 }
 
@@ -1049,7 +1015,6 @@ static AbstractConstraint *AbstractConstraint_satisfy(Constraint* me, int mark, 
         Constraint_inputsDo(me,AbstractConstraint_satisfy_iter, &mark);
 
         Variable* out = Constraint_getOutput(me);
-        Variable_assure(out);
         overridden = Variable_getDeterminedBy(out);
         if (overridden != 0) {
             Constraint_markUnsatisfied(overridden);
@@ -1284,9 +1249,7 @@ static void Planner_chainTest(int n)
     // Build chain of n equality constraints
     for (int i = 0; i < n; i++) {
         Variable* v1 = *(Variable**)Vector_at(vars, i);
-        Variable_assure(v1);
         Variable* v2 = *(Variable**)Vector_at(vars, i + 1);
-        Variable_assure(v2);
         tmp = EqualityConstraint_create(v1, v2, REQUIRED, planner);
         Vector_append(toDelete, &tmp);
     }
@@ -1301,11 +1264,9 @@ static void Planner_chainTest(int n)
     Plan* plan = Planner_extractPlanFromConstraints(planner, editV);
     for (int i = 0; i < 100; i++) {
         Variable* v = *(Variable**)Vector_at(vars, 0);
-        Variable_assure(v);
         Variable_setValue(v, i);
         Plan_execute(plan);
         v = *(Variable**)Vector_at(vars, n);
-        Variable_assure(v);
         if (Variable_getValue(v) != i) {
             assert(0); // "Chain test failed!"
         }
