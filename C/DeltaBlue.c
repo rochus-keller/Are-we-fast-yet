@@ -19,6 +19,7 @@ typedef struct Planner Planner;
 typedef struct Variable Variable;
 typedef struct AbstractConstraint AbstractConstraint;
 typedef struct Plan Plan;
+typedef union Constraint Constraint;
 
 struct Sym {
     int hash;
@@ -174,127 +175,114 @@ static Strength* Strength_weakest(Strength* me, Strength* s) {
     return Strength_weaker(s, me) ? s : me;
 }
 
-typedef struct Vtbl Vtbl;
-struct Vtbl {
-    bool (*isInput)(AbstractConstraint* me);
-    bool (*isSatisfied)(AbstractConstraint* me);
-    void (*addToGraph)(AbstractConstraint* me);
-    void (*removeFromGraph)(AbstractConstraint* me);
-    int (*chooseMethod)(AbstractConstraint* me, int mark);
-    void (*execute)(AbstractConstraint* me);
-    void (*inputsDo)(AbstractConstraint* me, ValueIterator fn, void* data); // Variable*
-    bool (*inputsHasOne)(AbstractConstraint* me, TestIterator fn, void* data); // Variable*
-    void (*markUnsatisfied)(AbstractConstraint* me);
-    Variable* (*getOutput)(AbstractConstraint* me);
-    void (*recalculate)(AbstractConstraint* me);
-    void (*dispose)(AbstractConstraint* me);
-};
-
-typedef enum ConstraintType { NoType = 0, EqualityContraintType = 23434728, ScaleContraintType = 583204892,
-                      EditContraintType = 68201024, StayContraintType = 23498140233 } ConstraintType;
+typedef enum ConstraintType { NoType = 0, EqualityConstraintType = 23434728, ScaleConstraintType = 583204892,
+                      EditConstraintType = 68201024, StayConstraintType = 23498140233 } ConstraintType;
 
 struct AbstractConstraint {
-    Vtbl* vtbl;
-    Strength* strength;
     ConstraintType type;
+    Strength* strength;
 };
 
+typedef struct UnaryConstraint {
+    AbstractConstraint base;
+    Variable* output; // possible output variable
+    bool  satisfied; // true if I am currently satisfied
+} UnaryConstraint;
 
-void Constraint_check(AbstractConstraint* c) {
-    assert( c->type == EqualityContraintType || c->type == ScaleContraintType ||
-            c->type == EditContraintType || c->type == StayContraintType );
+typedef struct EditConstraint {
+    UnaryConstraint base;
+} EditConstraint ;
+
+typedef struct StayConstraint  {
+    UnaryConstraint base;
+} StayConstraint;
+
+enum Direction { FORWARD = 1, BACKWARD = 2 };
+
+typedef struct BinaryConstraint {
+    AbstractConstraint base;
+    Variable* v1;
+    Variable* v2;          // possible output variables
+    int direction;  // Direction
+} BinaryConstraint;
+
+typedef struct EqualityConstraint {
+    BinaryConstraint base;
+} EqualityConstraint;
+
+typedef struct ScaleConstraint {
+    BinaryConstraint base;
+    Variable* scale;  // scale factor input variable
+    Variable* offset; // offset input variable
+} ScaleConstraint;
+
+union Constraint {
+    ConstraintType type;
+    AbstractConstraint abstract;
+    UnaryConstraint unary;
+    EditConstraint edit;
+    StayConstraint stay;
+    BinaryConstraint binary;
+    EqualityConstraint equality;
+    ScaleConstraint scale;
+};
+
+static Constraint* Constraint_create(ConstraintType t) {
+    Constraint* me = malloc(sizeof(Constraint));
+    me->type = t;
+    return me;
+}
+
+static void Constraint_dispose(Constraint* me) {
+    free(me);
 }
 
 // Normal constraints are not input constraints. An input constraint
 // is one that depends on external state, such as the mouse, the
 // keyboard, a clock, or some arbitrary piece of imperative code.
-static bool AbstractConstraint_isInput(AbstractConstraint* me) {
-    Constraint_check(me);
-    return false;
-}
+static bool Constraint_isInput(Constraint* me);
 
 // Answer true if this constraint is satisfied in the current solution.
-static bool AbstractConstraint_isSatisfied(AbstractConstraint* me) {
-    assert(0);
-}
+static bool Constraint_isSatisfied(Constraint* me);
 
 
 // Add myself to the constraint graph.
-static void AbstractConstraint_addToGraph(AbstractConstraint* me) {
-    assert(0);
-}
+static void Constraint_addToGraph(Constraint* me);
 
 // Remove myself from the constraint graph.
-static void AbstractConstraint_removeFromGraph(AbstractConstraint* me) {
-    assert(0);
-}
+static void Constraint_removeFromGraph(Constraint* me);
 
 // Decide if I can be satisfied and record that decision. The output
 // of the chosen method must not have the given mark and must have
 // a walkabout strength less than that of this constraint.
-static int AbstractConstraint_chooseMethod(AbstractConstraint* me, int mark) { // Direction
-    assert(0);
-}
+static int Constraint_chooseMethod(Constraint* me, int mark); // Direction
 
 // Enforce this constraint. Assume that it is satisfied.
-static void AbstractConstraint_execute(AbstractConstraint* me) {
-    assert(0);
-}
+static void Constraint_execute(Constraint* me);
 
 
-static void AbstractConstraint_inputsDo(AbstractConstraint* me, ValueIterator fn, void* data) {
-    assert(0);
-}
+static void Constraint_inputsDo(Constraint* me, ValueIterator fn, void* data);
 
-static bool AbstractConstraint_inputsHasOne(AbstractConstraint* me, TestIterator fn, void* data) {
-    assert(0);
-}
+static bool Constraint_inputsHasOne(Constraint* me, TestIterator fn, void* data);
 
 // Record the fact that I am unsatisfied.
-static void AbstractConstraint_markUnsatisfied(AbstractConstraint* me) {
-    assert(0);
-}
+static void Constraint_markUnsatisfied(Constraint* me);
 
 // Answer my current output variable. Raise an error if I am not
 // currently satisfied.
-static Variable* AbstractConstraint_getOutput(AbstractConstraint* me) {
-    assert(0);
-}
+static Variable* Constraint_getOutput(Constraint* me);
 
 // Calculate the walkabout strength, the stay flag, and, if it is
 // 'stay', the value for the current output of this
 // constraint. Assume this constraint is satisfied.
-static void AbstractConstraint_recalculate(AbstractConstraint* me) {
-    assert(0);
-}
+static void Constraint_recalculate(Constraint* me);
 
-static void AbstractConstraint_dispose(AbstractConstraint* me) {
-    Constraint_check(me);
-    free(me);
-}
-
-static Vtbl AbstractConstraint_vtbl = {
-    AbstractConstraint_isInput,
-    AbstractConstraint_isSatisfied,
-    AbstractConstraint_addToGraph,
-    AbstractConstraint_removeFromGraph,
-    AbstractConstraint_chooseMethod,
-    AbstractConstraint_execute,
-    AbstractConstraint_inputsDo,
-    AbstractConstraint_inputsHasOne,
-    AbstractConstraint_markUnsatisfied,
-    AbstractConstraint_getOutput,
-    AbstractConstraint_recalculate,
-    AbstractConstraint_dispose
-};
 
 static void AbstractConstraint_init(AbstractConstraint* me, Sym* strength) {
-    me->vtbl = &AbstractConstraint_vtbl;
     me->strength = Strength_of(strength);
 }
 
 static Strength* AbstractConstraint_getStrength(AbstractConstraint* me) {
-    Constraint_check(me);
     return me->strength;
 }
 
@@ -320,13 +308,13 @@ static bool AbstractConstraint_inputsKnown(AbstractConstraint* me, int mark);
 // there is one, or nil, if there isn't.
 // Assume: I am not already satisfied.
 //
-static AbstractConstraint* AbstractConstraint_satisfy(AbstractConstraint* me, int mark, Planner* planner);
+static AbstractConstraint* AbstractConstraint_satisfy(Constraint* me, int mark, Planner* planner);
 
 struct Variable {
     unsigned int test;
     int value_;       // my value; changed by constraints
-    Vector* constraints; // normal constraints that reference me, Vector<AbstractConstraint*>
-    AbstractConstraint* determinedBy; // the constraint that currently determines
+    Vector* constraints; // normal constraints that reference me, Vector<Constraint*>
+    Constraint* determinedBy; // the constraint that currently determines
     // my value (or null if there isn't one)
     int mark;        // used by the planner to mark constraints
     Strength* walkStrength; // my walkabout strength
@@ -336,10 +324,10 @@ struct Variable {
 #define VARIABLE_TEST 0xcacacafe
 
 static Variable* Variable_create() {
-    Variable* me = malloc(sizeof(Variable));
+    Variable* me = (Variable*)malloc(sizeof(Variable));
     me->test = VARIABLE_TEST;
     me->value_ = 0;
-    me->constraints = Vector_createDefault(sizeof(AbstractConstraint*));
+    me->constraints = Vector_createDefault(sizeof(Constraint*));
     me->determinedBy = 0;
     me->walkStrength = Strength_absoluteWeakest();
     me->stay = true;
@@ -386,7 +374,7 @@ static Variable* Variable_value(int aValue) {
 }
 
 // Add the given constraint to the set of all constraints that refer to me.
-static void Variable_addConstraint(Variable* me, AbstractConstraint* c) {
+static void Variable_addConstraint(Variable* me, Constraint* c) {
     Variable_assure(me);
     Vector_append(me->constraints, &c);
 }
@@ -396,12 +384,12 @@ static Vector* Variable_getConstraints(Variable* me) {
     return me->constraints;
 }
 
-static AbstractConstraint* Variable_getDeterminedBy(Variable* me) {
+static Constraint* Variable_getDeterminedBy(Variable* me) {
     Variable_assure(me);
     return me->determinedBy;
 }
 
-static void Variable_setDeterminedBy(Variable* me, AbstractConstraint* c) {
+static void Variable_setDeterminedBy(Variable* me, Constraint* c) {
     Variable_assure(me);
     me->determinedBy = c;
 }
@@ -417,7 +405,7 @@ static void Variable_setMark(Variable* me, int markValue) {
 }
 
 // Remove all traces of c from this variable.
-static void Variable_removeConstraint(Variable* me, AbstractConstraint* c) {
+static void Variable_removeConstraint(Variable* me, Constraint* c) {
     Variable_assure(me);
     Vector_remove(me->constraints, &c);
     if (me->determinedBy == c) {
@@ -441,7 +429,7 @@ struct Plan {
 
 static Plan* Plan_create() {
     Plan* me = malloc(sizeof(Plan));
-    me->constraints = Vector_create(sizeof(AbstractConstraint*), 15);
+    me->constraints = Vector_create(sizeof(Constraint*), 15);
     return me;
 }
 
@@ -452,8 +440,8 @@ static void Plan_dispose(Plan* me) {
 
 static void Plan_execute(Plan* me) {
     for( int i = 0; i < Vector_size(me->constraints); i++ ) {
-        AbstractConstraint* c = *(AbstractConstraint**)Vector_at(me->constraints, i);
-        c->vtbl->execute(c);
+        Constraint* c = *(Constraint**)Vector_at(me->constraints, i);
+        Constraint_execute(c);
     }
 }
 
@@ -486,9 +474,9 @@ static int Planner_newMark(Planner* me) {
 // the algorithm to avoid getting into an infinite loop even if the
 // constraint graph has an inadvertent cycle.
 //
-static void Planner_incrementalAdd(Planner* me, AbstractConstraint* c) {
+static void Planner_incrementalAdd(Planner* me, Constraint* c) {
     int mark = Planner_newMark(me);
-    AbstractConstraint* overridden = AbstractConstraint_satisfy(c, mark, me);
+    Constraint* overridden = AbstractConstraint_satisfy(c, mark, me);
 
     while (overridden != 0) {
         overridden = AbstractConstraint_satisfy(overridden, mark, me);
@@ -498,14 +486,13 @@ static void Planner_incrementalAdd(Planner* me, AbstractConstraint* c) {
 static void Planner_change(Planner* me, Variable* var, int newValue);
 
 static void Planner_constraintsConsuming(Planner* me, Variable* v,
-                                         ValueIterator fn, void* data) // ForEachInterface<AbstractConstraint*>
+                                         ValueIterator fn, void* data) // ForEachInterface<Constraint*>
 {
-    AbstractConstraint* determiningC = Variable_getDeterminedBy(v);
+    Constraint* determiningC = Variable_getDeterminedBy(v);
     for( int i = 0; i < Vector_size(Variable_getConstraints(v)); i++ )
     {
-        AbstractConstraint* c = *(AbstractConstraint**)Vector_at(Variable_getConstraints(v), i);
-        Constraint_check(c);
-        if (c != determiningC && c->vtbl->isSatisfied(c)) {
+        Constraint* c = *(Constraint**)Vector_at(Variable_getConstraints(v), i);
+        if (c != determiningC && Constraint_isSatisfied(c)) {
             fn(&c, data);
         }
     }
@@ -513,17 +500,16 @@ static void Planner_constraintsConsuming(Planner* me, Variable* v,
 
 static void Planner_removePropagateFrom_iter1(const Bytes value, void* data) {
     Vector* todo = data;
-    AbstractConstraint* c = *(AbstractConstraint**)value;
-    Constraint_check(c);
-    c->vtbl->recalculate(c);
-    Variable* var = c->vtbl->getOutput(c);
+    Constraint* c = *(Constraint**)value;
+    Constraint_recalculate(c);
+    Variable* var = Constraint_getOutput(c);
     Variable_assure(var);
     Vector_append(todo, &var);
 }
 
 static int Planner_removePropagateFrom_iter2(const Bytes lhs, const Bytes rhs, void* data) {
-    AbstractConstraint* c1 = *(AbstractConstraint**)lhs;
-    AbstractConstraint* c2 = *(AbstractConstraint**)rhs;
+    Constraint* c1 = *(Constraint**)lhs;
+    Constraint* c2 = *(Constraint**)rhs;
     return Strength_stronger(AbstractConstraint_getStrength(c1), AbstractConstraint_getStrength(c2)) ? -1 : 1;
 }
 
@@ -531,7 +517,7 @@ static int Planner_removePropagateFrom_iter2(const Bytes lhs, const Bytes rhs, v
 // downstream of the given constraint. Answer a collection of
 // unsatisfied constraints sorted in order of decreasing strength.
 static void Planner_removePropagateFrom(Planner* me, Variable* out,
-                                        Vector* unsatisfied) // Vector<AbstractConstraint*>
+                                        Vector* unsatisfied) // Vector<Constraint*>
 {
 
     Variable_setDeterminedBy(out, 0);
@@ -547,9 +533,8 @@ static void Planner_removePropagateFrom(Planner* me, Variable* out,
 
         for(int i = 0; i < Vector_size(Variable_getConstraints(v)); i++ )
         {
-            AbstractConstraint* c = *(AbstractConstraint**)Vector_at(Variable_getConstraints(v),i);
-            Constraint_check(c);
-            if (!c->vtbl->isSatisfied(c)) { Vector_append(unsatisfied, &c); }
+            Constraint* c = *(Constraint**)Vector_at(Variable_getConstraints(v),i);
+            if (!Constraint_isSatisfied(c)) { Vector_append(unsatisfied, &c); }
         }
 
         Planner_constraintsConsuming(me, v, Planner_removePropagateFrom_iter1, todo);
@@ -569,33 +554,30 @@ static void Planner_removePropagateFrom(Planner* me, Variable* out,
 // unnecessarily adding and then overriding weak constraints.
 // Assume: c is satisfied.
 //
-static void Planner_incrementalRemove(Planner* me, AbstractConstraint* c) {
-    Constraint_check(c);
-    Variable* out = c->vtbl->getOutput(c);
+static void Planner_incrementalRemove(Planner* me, Constraint* c) {
+    Variable* out = Constraint_getOutput(c);
     Variable_assure(out);
-    c->vtbl->markUnsatisfied(c);
-    c->vtbl->removeFromGraph(c);
+    Constraint_markUnsatisfied(c);
+    Constraint_removeFromGraph(c);
 
-    Vector* unsatisfied = Vector_createDefault(sizeof(AbstractConstraint*)); // Vector<AbstractConstraint*>
+    Vector* unsatisfied = Vector_createDefault(sizeof(Constraint*)); // Vector<Constraint*>
     Planner_removePropagateFrom(me, out,unsatisfied);
     for( int i = 0; i < Vector_size(unsatisfied); i++ ) {
-        AbstractConstraint* cc = *(AbstractConstraint**)Vector_at(unsatisfied, i);
-        Constraint_check(cc);
+        Constraint* cc = *(Constraint**)Vector_at(unsatisfied, i);
         Planner_incrementalAdd(me, cc);
     }
     Vector_dispose(unsatisfied);
 }
 
 static void Planner_addConstraintsConsumingTo(Planner* me, Variable* v,
-                                              Vector* coll)  // Vector<AbstractConstraint*>
+                                              Vector* coll)  // Vector<Constraint*>
 {
-    AbstractConstraint* determiningC = Variable_getDeterminedBy(v);
+    Constraint* determiningC = Variable_getDeterminedBy(v);
 
     for( int i = 0; i < Vector_size(Variable_getConstraints(v)); i++ )
     {
-        AbstractConstraint* c = *(AbstractConstraint**)Vector_at(Variable_getConstraints(v), i);
-        Constraint_check(c);
-        if (c != determiningC && c->vtbl->isSatisfied(c)) {
+        Constraint* c = *(Constraint**)Vector_at(Variable_getConstraints(v), i);
+        if (c != determiningC && Constraint_isSatisfied(c)) {
             Vector_append(coll, &c);
         }
     }
@@ -619,21 +601,20 @@ static void Planner_addConstraintsConsumingTo(Planner* me, Variable* v,
 // any constraint.
 // Assume: sources are all satisfied.
 //
-static Plan* Planner_makePlan(Planner* me, const Vector* sources)  // Vector<AbstractConstraint*>
+static Plan* Planner_makePlan(Planner* me, const Vector* sources)  // Vector<Constraint*>
 {
     int mark = Planner_newMark(me);
     Plan* plan = Plan_create();
     Vector* todo = Vector_copy(sources);
 
     while (!Vector_isEmpty(todo)) {
-        AbstractConstraint* c = *(AbstractConstraint**)Vector_removeFirst(todo);
-        Constraint_check(c);
+        Constraint* c = *(Constraint**)Vector_removeFirst(todo);
 
-        if (Variable_getMark(c->vtbl->getOutput(c)) != mark && AbstractConstraint_inputsKnown(c, mark)) {
+        if (Variable_getMark(Constraint_getOutput(c)) != mark && AbstractConstraint_inputsKnown(c, mark)) {
             // not in plan already and eligible for inclusion
             Vector_append(plan->constraints, &c);
-            Variable_setMark(c->vtbl->getOutput(c), mark);
-            Planner_addConstraintsConsumingTo(me, c->vtbl->getOutput(c), todo);
+            Variable_setMark(Constraint_getOutput(c), mark);
+            Planner_addConstraintsConsumingTo(me, Constraint_getOutput(c), todo);
         }
     }
     Vector_dispose(todo);
@@ -644,15 +625,14 @@ static Plan* Planner_makePlan(Planner* me, const Vector* sources)  // Vector<Abs
 // the given constraints, usually a set of input constraints.
 //
 static Plan* Planner_extractPlanFromConstraints(Planner* me,
-                         const Vector* constraints) // Vector<AbstractConstraint*>
+                         const Vector* constraints) // Vector<Constraint*>
 {
-    Vector* sources = Vector_createDefault(sizeof(AbstractConstraint*)); // Vector<AbstractConstraint*>
+    Vector* sources = Vector_createDefault(sizeof(Constraint*)); // Vector<Constraint*>
 
     for( int i = 0; i < Vector_size(constraints); i++ )
     {
-        AbstractConstraint* c = *(AbstractConstraint**)Vector_at(constraints, i);
-        Constraint_check(c);
-        if (c->vtbl->isInput(c) && c->vtbl->isSatisfied(c)) {
+        Constraint* c = *(Constraint**)Vector_at(constraints, i);
+        if (Constraint_isInput(c) && Constraint_isSatisfied(c)) {
             Vector_append(sources, &c);
         }
     }
@@ -674,20 +654,19 @@ static Plan* Planner_extractPlanFromConstraints(Planner* me,
 // the output constraint means that there is a path from the
 // constraint's output to one of its inputs.
 //
-static bool Planner_addPropagate(Planner* me, AbstractConstraint* c, int mark) {
-    Vector* todo = Vector_createDefault(sizeof(AbstractConstraint*)); // Vector<AbstractConstraint*>
+static bool Planner_addPropagate(Planner* me, Constraint* c, int mark) {
+    Vector* todo = Vector_createDefault(sizeof(Constraint*)); // Vector<Constraint*>
     Vector_append(todo, &c);
 
     while (!Vector_isEmpty(todo)) {
-        AbstractConstraint* d = *(AbstractConstraint**)Vector_removeFirst(todo);
-        Constraint_check(d);
+        Constraint* d = *(Constraint**)Vector_removeFirst(todo);
 
-        if (Variable_getMark(d->vtbl->getOutput(d)) == mark) {
+        if (Variable_getMark(Constraint_getOutput(d)) == mark) {
             Planner_incrementalRemove(me, c);
             return false;
         }
-        d->vtbl->recalculate(d);
-        Planner_addConstraintsConsumingTo(me, d->vtbl->getOutput(d), todo);
+        Constraint_recalculate(d);
+        Planner_addConstraintsConsumingTo(me, Constraint_getOutput(d), todo);
     }
     Vector_dispose(todo);
     return true;
@@ -716,28 +695,19 @@ static void Planner_chainTest(int n);
 static void Planner_projectionTest(int n);
 
 
-typedef struct UnaryConstraint {
-    AbstractConstraint base;
-    Variable* output; // possible output variable
-    bool  satisfied; // true if I am currently satisfied
-} UnaryConstraint;
-
 // Answer true if this constraint is satisfied in the current solution.
 static bool UnaryConstraint_isSatisfied(UnaryConstraint* me) {
-    Constraint_check(me);
     return me->satisfied;
 }
 
 // Add myself to the constraint graph.
 static void UnaryConstraint_addToGraph(UnaryConstraint* me) {
-    Constraint_check(me);
     Variable_addConstraint(me->output,me);
     me->satisfied = false;
 }
 
 // Remove myself from the constraint graph.
 static void UnaryConstraint_removeFromGraph(UnaryConstraint* me) {
-    Constraint_check(me);
     if (me->output != 0) {
         Variable_removeConstraint(me->output, me);
     }
@@ -745,36 +715,30 @@ static void UnaryConstraint_removeFromGraph(UnaryConstraint* me) {
 }
 
 static void UnaryConstraint_execute(UnaryConstraint* me) {
-    Constraint_check(me);
 } // do nothing.
 
 // Decide if I can be satisfied and record that decision.
 static int UnaryConstraint_chooseMethod(UnaryConstraint* me, int mark) {
-    Constraint_check(me);
     me->satisfied = Variable_getMark(me->output) != mark
             && Strength_stronger(me->base.strength, Variable_getWalkStrength(me->output));
     return 0;
 }
 
 static void UnaryConstraint_inputsDo(UnaryConstraint* me, ValueIterator fn, void* data) {
-    Constraint_check(me);
     // I have no input variables
 }
 
 static bool UnaryConstraint_inputsHasOne(UnaryConstraint* me, TestIterator fn, void* data) {
-    Constraint_check(me);
     return false;
 };
 
 // Record the fact that I am unsatisfied.
 static void UnaryConstraint_markUnsatisfied(UnaryConstraint* me) {
-    Constraint_check(me);
     me->satisfied = false;
 }
 
 // Answer my current output variable.
 static Variable* UnaryConstraint_getOutput(UnaryConstraint* me) {
-    Constraint_check(me);
     return me->output;
 }
 
@@ -782,103 +746,51 @@ static Variable* UnaryConstraint_getOutput(UnaryConstraint* me) {
 // 'stay', the value for the current output of this
 // constraint. Assume this constraint is satisfied."
 static void UnaryConstraint_recalculate(UnaryConstraint* me) {
-    Constraint_check(me);
     Variable_setWalkStrength(me->output, me->base.strength);
-    Variable_setStay(me->output, !me->base.vtbl->isInput(me));
+    Variable_setStay(me->output, !Constraint_isInput(me));
     if (Variable_getStay(me->output)) {
-        me->base.vtbl->execute(me); // stay optimization
+        Constraint_execute(me); // stay optimization
     }
 }
 
-static Vtbl UnaryConstraint_vtbl = {
-    AbstractConstraint_isInput,
-    UnaryConstraint_isSatisfied,
-    UnaryConstraint_addToGraph,
-    UnaryConstraint_removeFromGraph,
-    UnaryConstraint_chooseMethod,
-    UnaryConstraint_execute,
-    UnaryConstraint_inputsDo,
-    UnaryConstraint_inputsHasOne,
-    UnaryConstraint_markUnsatisfied,
-    UnaryConstraint_getOutput,
-    UnaryConstraint_recalculate,
-    AbstractConstraint_dispose
-};
-
 static void UnaryConstraint_init(UnaryConstraint* me, Variable* v, Sym* strength, Planner* planner) {
     AbstractConstraint_init(&me->base,strength);
-    me->base.vtbl = &UnaryConstraint_vtbl;
     me->output = v;
     Variable_assure(v);
     me->satisfied = false;
     AbstractConstraint_addConstraint(me, planner);
 }
 
-typedef struct EditConstraint {
-    UnaryConstraint base;
-} EditConstraint ;
-
 // I indicate that a variable is to be changed by imperative code.
 static bool EditConstraint_isInput(EditConstraint* me) {
-    Constraint_check(me);
     return true;
 }
 
-static Vtbl EditConstraint_vtbl = {
-    EditConstraint_isInput,
-    UnaryConstraint_isSatisfied,
-    UnaryConstraint_addToGraph,
-    UnaryConstraint_removeFromGraph,
-    UnaryConstraint_chooseMethod,
-    UnaryConstraint_execute,
-    UnaryConstraint_inputsDo,
-    UnaryConstraint_inputsHasOne,
-    UnaryConstraint_markUnsatisfied,
-    UnaryConstraint_getOutput,
-    UnaryConstraint_recalculate,
-    AbstractConstraint_dispose
-};
+
 
 static EditConstraint* EditConstraint_create(Variable* v, Sym* strength, Planner* planner) {
     Variable_assure(v);
-    EditConstraint* me = malloc(sizeof(EditConstraint));
+    EditConstraint* me = Constraint_create(EditConstraintType);
     UnaryConstraint_init(me, v, strength, planner );
-    me->base.base.vtbl = &EditConstraint_vtbl;
-    me->base.base.type = EditContraintType;
     return me;
 }
 
-typedef struct StayConstraint  {
-    UnaryConstraint base;
-} StayConstraint;
 
 // Install a stay constraint with the given strength on the given variable.
 static StayConstraint* StayConstraint_create(Variable* v, Sym* strength, Planner* planner) {
     Variable_assure(v);
-    StayConstraint* me = malloc(sizeof(StayConstraint));
-    me->base.base.type = StayContraintType;
+    StayConstraint* me = Constraint_create(StayConstraintType);
     UnaryConstraint_init(me, v, strength, planner );
     return me;
 }
 
-enum Direction { FORWARD = 1, BACKWARD = 2 };
-
-typedef struct BinaryConstraint {
-    AbstractConstraint base;
-    Variable* v1;
-    Variable* v2;          // possible output variables
-    int direction;  // Direction
-} BinaryConstraint;
-
 // Answer true if this constraint is satisfied in the current solution.
 static bool BinaryConstraint_isSatisfied(BinaryConstraint* me) {
-    Constraint_check(me);
     return me->direction != 0;
 }
 
 // Add myself to the constraint graph.
 static void BinaryConstraint_addToGraph(BinaryConstraint* me) {
-    Constraint_check(me);
     Variable_addConstraint(me->v1, me);
     Variable_addConstraint(me->v2, me);
     me->direction = 0;
@@ -886,7 +798,6 @@ static void BinaryConstraint_addToGraph(BinaryConstraint* me) {
 
 // Remove myself from the constraint graph.
 static void BinaryConstraint_removeFromGraph(BinaryConstraint* me) {
-    Constraint_check(me);
     if (me->v1 != 0) {
         Variable_removeConstraint(me->v1, me);
     }
@@ -897,7 +808,6 @@ static void BinaryConstraint_removeFromGraph(BinaryConstraint* me) {
 }
 
 static void BinaryConstraint_execute(BinaryConstraint* me) {
-    Constraint_check(me);
 } // do nothing.
 
 // Decide if I can be satisfied and which way I should flow based on
@@ -905,7 +815,6 @@ static void BinaryConstraint_execute(BinaryConstraint* me) {
 // decision.
 //
 static int BinaryConstraint_chooseMethod(BinaryConstraint* me, int mark) {
-    Constraint_check(me);
     if (Variable_getMark(me->v1) == mark) {
         if (Variable_getMark(me->v2) != mark && Strength_stronger(me->base.strength, Variable_getWalkStrength(me->v2))) {
             me->direction = FORWARD;
@@ -947,7 +856,6 @@ static int BinaryConstraint_chooseMethod(BinaryConstraint* me, int mark) {
 }
 
 static void BinaryConstraint_inputsDo(BinaryConstraint* me, ValueIterator fn, void* data) {
-    Constraint_check(me);
     if (me->direction == FORWARD) {
         fn(&me->v1, data);
     } else {
@@ -956,7 +864,6 @@ static void BinaryConstraint_inputsDo(BinaryConstraint* me, ValueIterator fn, vo
 }
 
 static bool BinaryConstraint_inputsHasOne(BinaryConstraint* me, TestIterator fn, void* data) {
-    Constraint_check(me);
     if (me->direction == FORWARD) {
         return fn(&me->v1, data);
     } else {
@@ -966,14 +873,12 @@ static bool BinaryConstraint_inputsHasOne(BinaryConstraint* me, TestIterator fn,
 
 // Record the fact that I am unsatisfied.
 static void BinaryConstraint_markUnsatisfied(BinaryConstraint* me) {
-    Constraint_check(me);
     me->direction = 0;
 }
 
 
 // Answer my current output variable.
 static Variable* BinaryConstraint_getOutput(BinaryConstraint* me) {
-    Constraint_check(me);
     return me->direction == FORWARD ? me->v2 : me->v1;
 }
 
@@ -982,7 +887,6 @@ static Variable* BinaryConstraint_getOutput(BinaryConstraint* me) {
 // constraint. Assume this constraint is satisfied.
 //
 static void BinaryConstraint_recalculate(BinaryConstraint* me) {
-    Constraint_check(me);
     Variable* in;
     Variable* out;
 
@@ -995,29 +899,13 @@ static void BinaryConstraint_recalculate(BinaryConstraint* me) {
     Variable_setWalkStrength(out, Strength_weakest(me->base.strength, Variable_getWalkStrength(in)));
     Variable_setStay(out, Variable_getStay(in));
     if (Variable_getStay(out)) {
-        me->base.vtbl->execute(me);
+        Constraint_execute(me);
     }
 }
-
-static Vtbl BinaryConstraint_vtbl = {
-    AbstractConstraint_isInput,
-    BinaryConstraint_isSatisfied,
-    BinaryConstraint_addToGraph,
-    BinaryConstraint_removeFromGraph,
-    BinaryConstraint_chooseMethod,
-    BinaryConstraint_execute,
-    BinaryConstraint_inputsDo,
-    BinaryConstraint_inputsHasOne,
-    BinaryConstraint_markUnsatisfied,
-    BinaryConstraint_getOutput,
-    BinaryConstraint_recalculate,
-    AbstractConstraint_dispose
-};
 
 static void BinaryConstraint_init(BinaryConstraint* me, Variable* var1, Variable* var2,
                  Sym* strength, Planner* planner) {
     AbstractConstraint_init(&me->base, strength);
-    me->base.vtbl = &BinaryConstraint_vtbl;
     me->v1 = var1;
     me->v2 = var2;
     Variable_assure(var1);
@@ -1025,13 +913,8 @@ static void BinaryConstraint_init(BinaryConstraint* me, Variable* var1, Variable
     me->direction = 0;
 }
 
-typedef struct EqualityConstraint {
-    BinaryConstraint base;
-} EqualityConstraint;
-
 // Enforce this constraint. Assume that it is satisfied.
 static void EqualityConstraint_execute(EqualityConstraint* me) {
-    Constraint_check(me);
     if (me->base.direction == FORWARD) {
         Variable_setValue(me->base.v2, Variable_getValue(me->base.v1));
     } else {
@@ -1039,42 +922,19 @@ static void EqualityConstraint_execute(EqualityConstraint* me) {
     }
 }
 
-static Vtbl EqualityConstraint_vtbl = {
-    AbstractConstraint_isInput,
-    BinaryConstraint_isSatisfied,
-    BinaryConstraint_addToGraph,
-    BinaryConstraint_removeFromGraph,
-    BinaryConstraint_chooseMethod,
-    EqualityConstraint_execute,
-    BinaryConstraint_inputsDo,
-    BinaryConstraint_inputsHasOne,
-    BinaryConstraint_markUnsatisfied,
-    BinaryConstraint_getOutput,
-    BinaryConstraint_recalculate,
-    AbstractConstraint_dispose
-};
-
 // Install a constraint with the given strength equating the given
 // variables.
 static EqualityConstraint* EqualityConstraint_create(Variable* var1, Variable* var2,
                    Sym* strength, Planner* planner) {
-    EqualityConstraint* me = malloc(sizeof(EqualityConstraint));
+    EqualityConstraint* me = Constraint_create(EqualityConstraintType);
     BinaryConstraint_init(me, var1, var2, strength, planner);
-    me->base.base.type = EqualityContraintType;
-    me->base.base.vtbl = &EqualityConstraint_vtbl;
     AbstractConstraint_addConstraint(me, planner);
     return me;
 }
 
-typedef struct ScaleConstraint {
-    BinaryConstraint base;
-    Variable* scale;  // scale factor input variable
-    Variable* offset; // offset input variable
-} ScaleConstraint;
 
 // Add myself to the constraint graph.
 static void ScaleConstraint_addToGraph(ScaleConstraint* me) {
-    Constraint_check(me);
     Variable_addConstraint(me->base.v1, me);
     Variable_addConstraint(me->base.v2, me);
     Variable_addConstraint(me->scale, me);
@@ -1084,7 +944,6 @@ static void ScaleConstraint_addToGraph(ScaleConstraint* me) {
 
 // Remove myself from the constraint graph.
 static void ScaleConstraint_removeFromGraph(ScaleConstraint* me) {
-    Constraint_check(me);
     if (me->base.v1 != 0) { Variable_removeConstraint(me->base.v1, me); }
     if (me->base.v2 != 0) { Variable_removeConstraint(me->base.v2, me); }
     if (me->scale  != 0) { Variable_removeConstraint(me->scale, me); }
@@ -1094,7 +953,6 @@ static void ScaleConstraint_removeFromGraph(ScaleConstraint* me) {
 
 // Enforce this constraint. Assume that it is satisfied.
 static void ScaleConstraint_execute(ScaleConstraint* me) {
-    Constraint_check(me);
     if (me->base.direction == FORWARD) {
         Variable_setValue(me->base.v2, Variable_getValue(me->base.v1) * Variable_getValue(me->scale) +
                           Variable_getValue(me->offset));
@@ -1105,7 +963,6 @@ static void ScaleConstraint_execute(ScaleConstraint* me) {
 }
 
 static void ScaleConstraint_inputsDo(ScaleConstraint* me, ValueIterator fn, void* data) {
-    Constraint_check(me);
     if (me->base.direction == FORWARD) {
         fn(&me->base.v1,data);
         fn(&me->scale, data);
@@ -1121,7 +978,6 @@ static void ScaleConstraint_inputsDo(ScaleConstraint* me, ValueIterator fn, void
 // 'stay', the value for the current output of this
 // constraint. Assume this constraint is satisfied.
 static void ScaleConstraint_recalculate(ScaleConstraint* me) {
-    Constraint_check(me);
     Variable* in;
     Variable* out;
 
@@ -1134,31 +990,14 @@ static void ScaleConstraint_recalculate(ScaleConstraint* me) {
     Variable_setWalkStrength(out, Strength_weakest(me->base.base.strength, Variable_getWalkStrength(in)));
     Variable_setStay(out, Variable_getStay(in) && Variable_getStay(me->scale) && Variable_getStay(me->offset));
     if (Variable_getStay(out)) {
-        me->base.base.vtbl->execute(me); // stay optimization
+        Constraint_execute(me); // stay optimization
     }
 }
 
-static Vtbl ScaleConstraint_vtbl = {
-    AbstractConstraint_isInput,
-    BinaryConstraint_isSatisfied,
-    ScaleConstraint_addToGraph,
-    ScaleConstraint_removeFromGraph,
-    BinaryConstraint_chooseMethod,
-    ScaleConstraint_execute,
-    ScaleConstraint_inputsDo,
-    BinaryConstraint_inputsHasOne,
-    BinaryConstraint_markUnsatisfied,
-    BinaryConstraint_getOutput,
-    ScaleConstraint_recalculate,
-    AbstractConstraint_dispose
-};
-
 static ScaleConstraint* ScaleConstraint_create(Variable* src, Variable* scale,
                 Variable* offset, Variable* dest, Sym* strength, Planner* planner) {
-    ScaleConstraint* me = malloc(sizeof(ScaleConstraint));
+    ScaleConstraint* me = Constraint_create(ScaleConstraintType);
     BinaryConstraint_init(me, src, dest, strength, planner);
-    me->base.base.vtbl = &ScaleConstraint_vtbl;
-    me->base.base.type = ScaleContraintType;
     me->scale = scale;
     me->offset = offset;
     AbstractConstraint_addConstraint(me,planner);
@@ -1167,18 +1006,16 @@ static ScaleConstraint* ScaleConstraint_create(Variable* src, Variable* scale,
 
 static void AbstractConstraint_addConstraint(AbstractConstraint* me, Planner *planner)
 {
-    Constraint_check(me);
-    me->vtbl->addToGraph(me);
+    Constraint_addToGraph(me);
     Planner_incrementalAdd(planner, me);
 }
 
 static void AbstractConstraint_destroyConstraint(AbstractConstraint* me, Planner *planner)
 {
-    Constraint_check(me);
-    if (me->vtbl->isSatisfied(me)) {
+    if (Constraint_isSatisfied(me)) {
         Planner_incrementalRemove(planner, me);
     }
-    me->vtbl->removeFromGraph(me);
+    Constraint_removeFromGraph(me);
 }
 
 static int AbstractConstraint_inputsKnown_iter(const Bytes value, void* data) {
@@ -1190,8 +1027,7 @@ static int AbstractConstraint_inputsKnown_iter(const Bytes value, void* data) {
 
 static bool AbstractConstraint_inputsKnown(AbstractConstraint* me, int mark)
 {
-    Constraint_check(me);
-    return !me->vtbl->inputsHasOne(me, AbstractConstraint_inputsKnown_iter, &mark);
+    return !Constraint_inputsHasOne(me, AbstractConstraint_inputsKnown_iter, &mark);
 }
 
 static void AbstractConstraint_satisfy_iter(const Bytes value, void* data) { // ForEachInterface<Variable*>
@@ -1201,23 +1037,22 @@ static void AbstractConstraint_satisfy_iter(const Bytes value, void* data) { // 
     Variable_setMark(in, *mark);
 }
 
-static AbstractConstraint *AbstractConstraint_satisfy(AbstractConstraint* me, int mark, Planner *planner)
+static AbstractConstraint *AbstractConstraint_satisfy(Constraint* me, int mark, Planner *planner)
 {
-    Constraint_check(me);
-    AbstractConstraint* overridden = 0;
+    Constraint* overridden = 0;
 
-    me->vtbl->chooseMethod(me, mark);
+    Constraint_chooseMethod(me, mark);
 
-    if (me->vtbl->isSatisfied(me)) {
+    if (Constraint_isSatisfied(me)) {
         // constraint can be satisfied
         // mark inputs to allow cycle detection in addPropagate
-        me->vtbl->inputsDo(me,AbstractConstraint_satisfy_iter, &mark);
+        Constraint_inputsDo(me,AbstractConstraint_satisfy_iter, &mark);
 
-        Variable* out = me->vtbl->getOutput(me);
+        Variable* out = Constraint_getOutput(me);
         Variable_assure(out);
         overridden = Variable_getDeterminedBy(out);
         if (overridden != 0) {
-            me->vtbl->markUnsatisfied(overridden);
+            Constraint_markUnsatisfied(overridden);
         }
         Variable_setDeterminedBy(out, me);
         if (!Planner_addPropagate(planner, me, mark)) {
@@ -1226,11 +1061,194 @@ static AbstractConstraint *AbstractConstraint_satisfy(AbstractConstraint* me, in
         Variable_setMark(out, mark);
     } else {
         overridden = 0;
-        if (Strength_sameAs(me->strength, Strength_required())) {
+        if (Strength_sameAs(me->abstract.strength, Strength_required())) {
             assert(0); // "Could not satisfy a required constraint"
         }
     }
     return overridden;
+}
+
+static bool Constraint_isInput(Constraint* me) {
+    switch(me->type)
+    {
+    case EditConstraintType:
+        return EditConstraint_isInput(&me->edit);
+    case StayConstraintType:
+    case EqualityConstraintType:
+    case ScaleConstraintType:
+        break;
+    default:
+        assert(0);
+    }
+    return false;
+}
+
+static bool Constraint_isSatisfied(Constraint* me) {
+    switch(me->type)
+    {
+    case EditConstraintType:
+    case StayConstraintType:
+        return UnaryConstraint_isSatisfied(&me->unary);
+    case EqualityConstraintType:
+    case ScaleConstraintType:
+        return BinaryConstraint_isSatisfied(&me->binary);
+    default:
+        assert(0);
+    }
+    return false;
+}
+
+static void Constraint_addToGraph(Constraint* me) {
+    switch(me->type)
+    {
+    case EditConstraintType:
+    case StayConstraintType:
+        UnaryConstraint_addToGraph(&me->unary);
+        break;
+    case EqualityConstraintType:
+        BinaryConstraint_addToGraph(&me->binary);
+        break;
+    case ScaleConstraintType:
+        ScaleConstraint_addToGraph(&me->scale);
+        break;
+    default:
+        assert(0);
+    }
+}
+
+static void Constraint_removeFromGraph(Constraint* me) {
+    switch(me->type)
+    {
+    case EditConstraintType:
+    case StayConstraintType:
+        UnaryConstraint_removeFromGraph(&me->unary);
+        break;
+    case EqualityConstraintType:
+        BinaryConstraint_removeFromGraph(&me->binary);
+        break;
+    case ScaleConstraintType:
+        ScaleConstraint_removeFromGraph(&me->scale);
+        break;
+    default:
+        assert(0);
+    }
+}
+
+static int Constraint_chooseMethod(Constraint* me, int mark) { // Direction
+    switch(me->type)
+    {
+    case EditConstraintType:
+    case StayConstraintType:
+        return UnaryConstraint_chooseMethod(&me->unary, mark);
+    case EqualityConstraintType:
+        return BinaryConstraint_chooseMethod(&me->binary, mark);
+    case ScaleConstraintType:
+        return BinaryConstraint_chooseMethod(&me->scale, mark);
+    default:
+        assert(0);
+    }
+    return 0;
+}
+
+static void Constraint_execute(Constraint* me) {
+    switch(me->type)
+    {
+    case EditConstraintType:
+    case StayConstraintType:
+        UnaryConstraint_execute(&me->unary);
+        break;
+    case EqualityConstraintType:
+        EqualityConstraint_execute(&me->equality);
+        break;
+    case ScaleConstraintType:
+        ScaleConstraint_execute(&me->scale);
+        break;
+    default:
+        assert(0);
+    }
+}
+
+
+static void Constraint_inputsDo(Constraint* me, ValueIterator fn, void* data) {
+    switch(me->type)
+    {
+    case EditConstraintType:
+    case StayConstraintType:
+        UnaryConstraint_inputsDo(&me->unary, fn, data);
+        break;
+    case EqualityConstraintType:
+        BinaryConstraint_inputsDo(&me->binary, fn, data);
+        break;
+    case ScaleConstraintType:
+        ScaleConstraint_inputsDo(&me->scale, fn, data);
+        break;
+    default:
+        assert(0);
+    }
+}
+
+static bool Constraint_inputsHasOne(Constraint* me, TestIterator fn, void* data) {
+    switch(me->type)
+    {
+    case EditConstraintType:
+    case StayConstraintType:
+        return UnaryConstraint_inputsHasOne(&me->unary, fn, data);
+    case EqualityConstraintType:
+    case ScaleConstraintType:
+        return BinaryConstraint_inputsHasOne(&me->binary, fn, data);
+    default:
+        assert(0);
+    }
+    return false;
+}
+
+static void Constraint_markUnsatisfied(Constraint* me) {
+    switch(me->type)
+    {
+    case EditConstraintType:
+    case StayConstraintType:
+        UnaryConstraint_markUnsatisfied(&me->unary);
+        break;
+    case EqualityConstraintType:
+    case ScaleConstraintType:
+        BinaryConstraint_markUnsatisfied(&me->binary);
+        break;
+    default:
+        assert(0);
+    }
+}
+
+static Variable* Constraint_getOutput(Constraint* me) {
+    switch(me->type)
+    {
+    case EditConstraintType:
+    case StayConstraintType:
+        return UnaryConstraint_getOutput(&me->unary);
+    case EqualityConstraintType:
+    case ScaleConstraintType:
+        return BinaryConstraint_getOutput(&me->binary);
+    default:
+        assert(0);
+    }
+    return 0;
+}
+
+static void Constraint_recalculate(Constraint* me) {
+    switch(me->type)
+    {
+    case EditConstraintType:
+    case StayConstraintType:
+        UnaryConstraint_recalculate(&me->unary);
+        break;
+    case EqualityConstraintType:
+        BinaryConstraint_recalculate(&me->binary);
+        break;
+    case ScaleConstraintType:
+        ScaleConstraint_recalculate(&me->scale);
+        break;
+    default:
+        assert(0);
+    }
 }
 
 static void Planner_change(Planner* me, Variable *var, int newValue)
@@ -1245,7 +1263,7 @@ static void Planner_change(Planner* me, Variable *var, int newValue)
         Plan_execute(plan);
     }
     AbstractConstraint_destroyConstraint(editC, me);
-    editC->base.base.vtbl->dispose(editC);
+    Constraint_dispose(editC);
     Vector_dispose(editV);
     Plan_dispose(plan);
 }
@@ -1299,8 +1317,7 @@ static void Planner_chainTest(int n)
 
     for( int i = 0; i < Vector_size(toDelete); i++ ) {
         AbstractConstraint* c = *(AbstractConstraint**)Vector_at(toDelete, i);
-        Constraint_check(c);
-        c->vtbl->dispose(c);
+        Constraint_dispose(c);
     }
 
     Plan_dispose(plan);
@@ -1368,8 +1385,7 @@ static void Planner_projectionTest(int n)
         Variable_dispose( *(Variable**)Vector_at(toDelete, i) );
     for( int i = 0; i < Vector_size(toDelete2); i++ ) {
         AbstractConstraint* c = *(AbstractConstraint**)Vector_at(toDelete2, i);
-        Constraint_check(c);
-        c->vtbl->dispose(c);
+        Constraint_dispose(c);
     }
 
     free(planner);
@@ -1421,8 +1437,6 @@ static bool verifyResult(int result) {
 
 Benchmark*DeltaBlue_create()
 {
-    return 0; // TODO: this benchmark still crashes; more debugging required
-
     Benchmark* bench = (Benchmark*)malloc(sizeof(Benchmark));
     bench->benchmark = benchmark;
     bench->verifyResult = verifyResult;

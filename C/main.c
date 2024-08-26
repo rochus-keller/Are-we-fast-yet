@@ -180,7 +180,6 @@ int main(int argc, char *argv[])
 {
     runAll();
     //runOnce();
-    //run("DeltaBlue", 1, 1 );
 
     return 0;
 }
