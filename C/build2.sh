@@ -1,6 +1,6 @@
 # Author: Rochus Keller, 2024
 
-flags="-g -w " 
+flags=" -w " 
 
 for t in som/*.c
 do

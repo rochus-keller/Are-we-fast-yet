@@ -67,7 +67,6 @@ static bool placeQueen(Queens* me, int c)
 
 static bool queens(Queens* me)
 {
-    // stack allocation would save 2us of 165us, and further deviate from the original code.
     me->freeRows  = (bool*)calloc(8,1);
     me->freeMaxs  = (bool*)calloc(16,1);
     me->freeMins  = (bool*)calloc(16,1);
