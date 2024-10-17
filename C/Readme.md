@@ -17,4 +17,4 @@ As expected, the C99 implementation runs about as fast as the C++ one (the latte
 
 The benchmark suite can be easily built using  `gcc *.c som/*.c -O2 -w -std=c99 -lm`, or the included qmake file.
 
-Note that there are a lot of warnings, mostly due to polymorphic use of structures and unions. I checked the warnings for relevance and you can safely ignore them (using e.g. `-w` as suggested). Unfortunately some more recent compiler versions nowadays (unfortunately) treat warnings as errors. In that case, use e.g. the `-fpermissive` option. 
+Note that there are a lot of warnings, mostly due to polymorphic use of structures and unions. I checked the warnings for relevance and you can safely ignore them (using e.g. `-w` as suggested). Unfortunately some more recent compiler versions nowadays treat warnings as errors. In that case, use e.g. the `-fpermissive` option. 

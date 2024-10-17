@@ -54,7 +54,7 @@ static void permute(Permute* me, int n)
 static int benchmark(Permute* me)
 {
     me->count = 0;
-    me->v     = (int*)calloc(6, sizeof(int));;
+    me->v     = (int*)calloc(6, sizeof(int));
     permute(me,6);
     free(me->v);
     return me->count;

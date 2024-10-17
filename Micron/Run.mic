@@ -1,0 +1,185 @@
+(* This code is derived from the SOM benchmarks, see AUTHORS.md file.
+ *
+ * Copyright (c) 2024 Rochus Keller <me@rochus-keller.ch> (for Micron migration)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the 'Software'), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *)
+ 
+ module Run
+
+import B := Benchmark, Input, Out, Bounce, Mandelbrot, Permute, List
+
+type 
+	Run* = record
+			name*: pointer to array of char
+			benchmarkSuite*: ^B.Benchmark
+			numIterations*, innerIterations*, total*: integer
+		  end
+
+proc getSuiteFromName*( const name : pointer to array of char ) : ^B.Benchmark
+begin
+	if name = "Bounce" then
+        return Bounce.create()
+    elsif name = "Mandelbrot" then
+        return Mandelbrot.create()
+    elsif name = "Permute" then
+        return Permute.create()
+    elsif name = "List" then
+        return List.create()
+    end
+(*
+    elsif name = "Queens" then
+        return Queens.create()
+    elsif name = "Sieve" then
+        return Sieve.create()
+    elsif name = "Storage" then
+        return Storage.create()
+    elsif name = "Towers" then
+        return Towers.create()
+    elsif name = "Richards" then
+        return Richards.create()
+    elsif name = "Json" then
+        return Json.create()
+    elsif name = "NBody" then
+        return NBody.create()
+    elsif name = "CD2" then
+        return CD2.create()
+    elsif name = "CD" then
+        return CD.create()
+    elsif name = "Havlak" then
+        return Havlak.create()
+    elsif name = "DeltaBlue" then
+        return DeltaBlue.create()
+    end
+    *)
+    return nil
+end getSuiteFromName
+
+proc init*(me: ^Run; const name: ^[]char)
+begin
+    me.numIterations := 1
+    me.innerIterations := 1
+    me.total := 0
+    me.name := name
+    me.benchmarkSuite := getSuiteFromName(name)
+end init
+
+proc deinit*(me: ^Run)
+begin
+    if me.benchmarkSuite # nil then
+        if me.benchmarkSuite.dispose # nil then
+            me.benchmarkSuite.dispose(me.benchmarkSuite)
+        end
+        dispose( me.benchmarkSuite )
+    end
+end deinit
+
+proc printResult(me: ^Run; runTime: integer)
+begin
+    return; // TODO
+    Out.String(me.name)
+    Out.String(": iterations=1 runtime: ")
+    Out.Int(runTime,0)
+    Out.String("us")
+    Out.Ln
+end printResult
+    
+proc printTotal*(me: ^Run)
+begin
+    return; // TODO
+    Out.String("Total Runtime: ")
+    Out.Int(me.total,0)
+    Out.String("us")
+    Out.Ln
+end printTotal
+
+proc measure(me: ^Run; bench : ^B.Benchmark) : boolean
+    var startTime, endTime, runTime : integer
+    	innerBenchmarkLoop : procedure(me: ^B.Benchmark; innerIterations: integer): boolean
+begin
+    startTime := Input.Time()
+    innerBenchmarkLoop := bench.innerBenchmarkLoop
+    if innerBenchmarkLoop = nil then
+    	innerBenchmarkLoop := B.innerBenchmarkLoop
+    end
+    if not innerBenchmarkLoop(bench, me.innerIterations) then
+        return false
+    end
+    endTime := Input.Time()
+    runTime := endTime - startTime
+    printResult(me, runTime)
+    me.total := me.total + runTime
+    return true
+end measure    
+
+proc doRuns(me: ^Run; bench : ^B.Benchmark) : boolean
+    var i : integer
+begin
+    for i := 0 to me.numIterations - 1 do
+        if not measure(me, bench) then
+            return false
+        end
+    end
+    return true
+end doRuns
+ 
+proc reportBenchmark(me: ^Run)
+begin
+    Out.String(me.name)
+    Out.String(": iterations=")
+    Out.Int(me.numIterations,0)
+    Out.String(" average: ")
+    Out.Int(me.total DIV me.numIterations,0)
+    Out.String("us total: ")
+    Out.Int(me.total,0)
+    Out.String("us")
+    Out.Ln
+end reportBenchmark
+
+proc runBenchmark*(me: ^Run)
+begin
+    Out.String("Starting ")
+    Out.String(me.name)
+    Out.String(" benchmark ...")
+    Out.Ln
+    
+    if me.benchmarkSuite = nil then
+        Out.String("ERROR unknown benchmark ")
+        Out.String(me.name) Out.Ln 
+        return
+    end
+    if not doRuns(me,me.benchmarkSuite) then
+        Out.String("ERROR") Out.Ln 
+        return
+    end
+    reportBenchmark(me)
+    Out.Ln
+end runBenchmark
+
+proc setNumIterations*(me: ^Run; numIterations: integer)
+begin
+    me.numIterations := numIterations
+end setNumIterations
+
+proc setInnerIterations*(me: ^Run; innerIterations: integer)
+begin
+    me.innerIterations := innerIterations
+end setInnerIterations
+   
+end Run
