@@ -89,7 +89,7 @@ module Json
     type
         JsonString = record (JsonValue) string: String end
     
-    proc toString(in str: array of char): String
+    proc toString(const str: array of char): String
         var s: String
     begin
         new(s, len(str))
@@ -349,7 +349,7 @@ module Json
         p.captureStart := -1
         p.column := 0
         p.current := 0x
-        p.captureBuffer := ""
+        p.captureBuffer[0] := 0x
         return p
     end createParser
     
@@ -657,7 +657,7 @@ module Json
         inc(this.capturePos)
     end captureChar
     
-   proc (this: JsonPureStringParser) expected(in expected: array of char )
+   proc (this: JsonPureStringParser) expected(const expected: array of char )
    begin
        if this.isEndOfText() then
            Out.String("Unexpected end of input")
@@ -673,7 +673,7 @@ module Json
         halt(0)
     end expected
 
-    proc (this: JsonPureStringParser) error(in message: array of char)
+    proc (this: JsonPureStringParser) error(const message: array of char)
     begin
         Out.String(message)
         Out.String(" ")

@@ -50,7 +50,7 @@ import
         return createWithSize(INITIAL_SIZE)
     end create
     
-    proc createWithElement*(in elem : E) : Vector
+    proc createWithElement*(const elem : E) : Vector
         var v : Vector
     begin
         //I.hello()
@@ -79,7 +79,7 @@ import
             this.storage := storage
     end resize
     
-    proc (this: Vector) atPut*(idx : integer; in elem : E)
+    proc (this: Vector) atPut*(idx : integer; const elem : E)
         var 
             length : integer
     begin
@@ -96,7 +96,7 @@ import
         end
     end atPut
     
-    proc (this: Vector) append*(in elem : E)
+    proc (this: Vector) append*(const elem : E)
         var 
             lenght : integer
     begin
@@ -178,9 +178,9 @@ import
         return false 
     end getOne
     
-    type CheckEqual = proc(in lhs,rhs: E): boolean
+    type CheckEqual = proc(const lhs,rhs: E): boolean
     
-    proc (this: Vector) remove*(in obj: E; eq: CheckEqual) : boolean
+    proc (this: Vector) remove*(const obj: E; eq: CheckEqual) : boolean
         var
             newArray : array of E
             i, newLast : integer

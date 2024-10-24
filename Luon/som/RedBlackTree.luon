@@ -35,7 +35,7 @@ module RedBlackTree(K,V)
                     color: Color
                 end
                 
-    proc createNode(in key: K; in value: V): Node
+    proc createNode(const key: K; const value: V): Node
         var n: Node
     begin
         new(n)
@@ -72,7 +72,7 @@ module RedBlackTree(K,V)
         
     ////////// RedBlackTree /////////////////
     type
-        CompareFunc = proc(in lhs, rhs: K): integer
+        CompareFunc = proc(const lhs, rhs: K): integer
         
         RedBlackTree* = record 
                                 root: Node
@@ -97,13 +97,13 @@ module RedBlackTree(K,V)
         return t    
     end create
     
-    proc (this: RedBlackTree) put*(in key: K; in value: V): V
+    proc (this: RedBlackTree) put*(const key: K; const value: V): V
         var newEntry: boolean
     begin
         return this.putChecked(key,value,newEntry) 
     end put
     
-    proc (this: RedBlackTree) putChecked*(in key: K; in value: V; var newEntry: boolean): V
+    proc (this: RedBlackTree) putChecked*(const key: K; const value: V; var newEntry: boolean): V
         var insertionResult: InsertResult
             x,y: Node
     begin
@@ -162,7 +162,7 @@ module RedBlackTree(K,V)
     return default(V) // original null
   end putChecked
   
-  proc (this: RedBlackTree) remove*(in key: K): V
+  proc (this: RedBlackTree) remove*(const key: K): V
       var x,y,z,xParent: Node
   begin
     z := this.findNode(key)
@@ -234,7 +234,7 @@ module RedBlackTree(K,V)
     return z.value
   end remove
 
-  proc (this: RedBlackTree) get*(in key: K): V
+  proc (this: RedBlackTree) get*(const key: K): V
       var node: Node
   begin
     node := this.findNode(key)
@@ -260,7 +260,7 @@ module RedBlackTree(K,V)
     end
   end forEach
   
-  proc (this: RedBlackTree) findNode(in key: K): Node
+  proc (this: RedBlackTree) findNode(const key: K): Node
       var current: Node
           comparisonResult: integer
   begin
@@ -278,7 +278,7 @@ module RedBlackTree(K,V)
     return nil
   end findNode
   
-  proc (this: RedBlackTree) treeInsert(in key: K; in value: V; var res: InsertResult) 
+  proc (this: RedBlackTree) treeInsert(const key: K; const value: V; var res: InsertResult) 
       var x,y,z: Node
           comparisonResult: integer
   begin

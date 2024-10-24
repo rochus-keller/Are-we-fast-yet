@@ -75,18 +75,18 @@ type
         this.items.removeAll()
     end removeAll
     
-    proc (this: Set) add*(in obj: E)
+    proc (this: Set) add*(const obj: E)
     begin
         if ~this.contains(obj) then
             this.items.append(obj)
         end
     end add
     
-    proc (this: Set) contains*(in obj: E) : boolean
+    proc (this: Set) contains*(const obj: E) : boolean
     
         type TestInterface = record (I.TestInterface) obj : E end
             
-        proc (this:TestInterface) test(in elem: E) : boolean
+        proc (this:TestInterface) test(const elem: E) : boolean
         begin
             return elem = this.obj
         end test

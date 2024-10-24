@@ -26,7 +26,7 @@ module IdentityDictionary(K,V; const hf: HashFunc)
     import D := Dictionary(K,V,hf)
     
     type
-        HashFunc* = proc(in k: K):integer
+        HashFunc* = proc(const k: K):integer
         IdentityDictionary* = D.Dictionary
         
     // NOTE this is identical to Dictionary; don't know why a separate module is implemented,

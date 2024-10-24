@@ -107,7 +107,7 @@ module Havlak
         return b
     end createBasicBlock
     
-    proc BasicBlockHash(in b: BasicBlock):integer
+    proc BasicBlockHash(const b: BasicBlock):integer
     begin
         return b.name 
     end BasicBlockHash
@@ -236,7 +236,7 @@ module Havlak
             
     proc (this: UnionFindNode) findSet(): UnionFindNode
         type FI = record (UNV.ForEachInterface) parent: UnionFindNode end
-        proc (this: FI) apply(in elem: UnionFindNode) 
+        proc (this: FI) apply(const elem: UnionFindNode) 
         begin
                 elem.union(this.parent)
         end apply
@@ -293,7 +293,7 @@ module Havlak
             
     proc (this: LoopStructureGraph) calculateNestingLevel()
         type FI = record (SLV.ForEachInterface) root: SimpleLoop end
-        proc (this: FI) apply(in elem: SimpleLoop) 
+        proc (this: FI) apply(const elem: SimpleLoop) 
         begin
             if ~elem.isRoot then
                 if elem.parent = nil then
@@ -314,7 +314,7 @@ module Havlak
    proc (this: LoopStructureGraph) calculateNestingLevelRec(looop: SimpleLoop; depth: integer)
         type FI = record (SLV.ForEachInterface)  
                         this: LoopStructureGraph looop: SimpleLoop depth: integer end
-        proc (this: FI) apply(in elem: SimpleLoop) 
+        proc (this: FI) apply(const elem: SimpleLoop) 
         begin
             this.this.calculateNestingLevelRec(elem, this.depth + 1)
 
@@ -467,7 +467,7 @@ module Havlak
         VSI := som.Vector(SI.Set)
         VI := som.Vector(integer)
         VVI := som.Vector(VI.Vector)
-        ID := som.IdentityDictionary(BasicBlock,integer)
+        ID := som.IdentityDictionary(BasicBlock,integer,hashBasicBlock)
     const 
         UNVISITED = max(integer)
         MAXNONBACKPREDS = 32 * 1024
@@ -502,11 +502,11 @@ module Havlak
         this.maxSize := 0
         this.nonBackPreds := VSI.create()
         this.backPreds := VVI.create()
-        this.number := ID.create(hashBasicBlock)
+        this.number := ID.create()
         return this
     end createHavlakLoopFinder        
     
-    proc hashBasicBlock(in k: BasicBlock):integer
+    proc hashBasicBlock(const k: BasicBlock):integer
     begin
         return k.name 
     end hashBasicBlock
@@ -545,7 +545,7 @@ module Havlak
     //   - unreached BB's are marked as dead.
     //
         type FI = record (BBV.ForEachInterface) number: ID.IdentityDictionary end
-        proc (this: FI) apply(in elem: BasicBlock) 
+        proc (this: FI) apply(const elem: BasicBlock) 
         begin
             this.number.atPut(elem,UNVISITED)
         end apply
@@ -586,7 +586,7 @@ module Havlak
                                           
     proc (this: HavlakLoopFinder) processEdges(nodeW: BasicBlock; w: integer)
         type FI = record (BBV.ForEachInterface) this: HavlakLoopFinder; w: integer end
-        proc (this: FI) apply(in nodeV: BasicBlock) 
+        proc (this: FI) apply(const nodeV: BasicBlock) 
             var v: integer
                 tmp: SI.Set
         begin
@@ -618,7 +618,7 @@ module Havlak
   //
   proc (this: HavlakLoopFinder) findLoops()
         type FI1 = record (UNV.ForEachInterface) workList: UNV.Vector end
-        proc (this: FI1) apply(in elem: UnionFindNode) 
+        proc (this: FI1) apply(const elem: UnionFindNode) 
         begin
             this.workList.append(elem)
         end apply
@@ -735,9 +735,9 @@ module Havlak
                         nodePool, workList: UNV.Vector
                         w: integer
                     end
-      proc (this: FI) apply(in elem: integer) 
+      proc (this: FI) apply(const elem: integer) 
           type TI = record (UNV.TestInterface) ydash: UnionFindNode end
-         proc (this: TI) test(in elem: UnionFindNode) : boolean 
+         proc (this: TI) test(const elem: UnionFindNode) : boolean 
          begin
              return elem = this.ydash 
          end test
@@ -788,7 +788,7 @@ module Havlak
                     w: integer 
                     looop: SimpleLoop
                    end
-     proc (this: FI) apply(in node: UnionFindNode) 
+     proc (this: FI) apply(const node: UnionFindNode) 
      begin
       // Add nodes to loop descriptor.
       this.this.header[node.dfsNumber] := this.w
@@ -816,7 +816,7 @@ module Havlak
                     w: integer 
                     nodePool: UNV.Vector
                    end
-      proc (this: FI) apply(in v: integer) 
+      proc (this: FI) apply(const v: integer) 
       begin
       if v # this.w then
         this.nodePool.append(this.this.nodes[v].findSet())

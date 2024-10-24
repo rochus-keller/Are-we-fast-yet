@@ -55,7 +55,7 @@ module Dictionary(K,V; const hf: HashFunc)
     const INITIAL_CAPACITY = 16
     
     type
-        HashFunc* = proc(in k: K):integer
+        HashFunc* = proc(const k: K):integer
         Dictionary* = record
                             buckets: array of Entry 
                             size: integer
@@ -75,12 +75,12 @@ module Dictionary(K,V; const hf: HashFunc)
         return d
     end createWithSize
     
-    proc (this: Dictionary) hash(in key: K ): integer
+    proc (this: Dictionary) hash(const key: K ): integer
         var h: integer
     begin
         h := hf(key)
         // not supported in OBX: h := key.customHash()
-       return bitxor( h, ror(h, 16) )
+       return bitxor( h, bitshr(h, 16) )
    end hash
    
    proc (this: Dictionary) getSize*(): integer
@@ -103,7 +103,7 @@ module Dictionary(K,V; const hf: HashFunc)
        return this.buckets[this.getBucketIdx(hash)] 
     end getBucket
 
-    proc (this: Dictionary) at*(in key: K): V
+    proc (this: Dictionary) at*(const key: K): V
         var h: integer
             e: Entry
     begin
@@ -119,7 +119,7 @@ module Dictionary(K,V; const hf: HashFunc)
        return default(V)
    end at
    
-   proc (this: Dictionary) containsKey*(in key: K): boolean
+   proc (this: Dictionary) containsKey*(const key: K): boolean
        var h: integer
            e: Entry
     begin
@@ -135,7 +135,7 @@ module Dictionary(K,V; const hf: HashFunc)
       return false
    end containsKey
    
-   proc (this: Dictionary) atPut*(in key: K; in value: V) 
+   proc (this: Dictionary) atPut*(const key: K; const value: V) 
        var h, i: integer
            current: Entry
    begin
@@ -156,12 +156,12 @@ module Dictionary(K,V; const hf: HashFunc)
       end
    end atPut
    
-   proc (this: Dictionary) newEntry*(in key: K; in value: V; hash: integer):Entry
+   proc (this: Dictionary) newEntry*(const key: K; const value: V; hash: integer):Entry
    begin
        return createEntry(hash, key,value,nil)
    end newEntry
    
-   proc (this: Dictionary) insertBucketEntry(in key: K; in value: V; hash: integer; head: Entry )
+   proc (this: Dictionary) insertBucketEntry(const key: K; const value: V; hash: integer; head: Entry )
        var current: Entry
     begin
        current := head

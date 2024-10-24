@@ -22,9 +22,9 @@
  *)
  
 module Run
-    import B := Benchmark, Out, Input
-        (*Permute, Bounce, List, Mandelbrot, Queens, Sieve, Storage, Towers,
-        Richards, Json, NBody, CD, CD2, Havlak, DeltaBlue*)
+    import B := Benchmark, Out, Input, Json, CD, Havlak
+        (* , DeltaBlue Permute, Bounce, List, Mandelbrot, Queens, Sieve, Storage, Towers,
+        Richards, NBody,*)
     
     type Run* = record
                                 name : array 32 of char
@@ -32,11 +32,11 @@ module Run
                                 numIterations, innerIterations, total : integer
                             end
                             
-    proc create*( in name : array of char ) : Run
+    proc create*( const name : array of char ) : Run
         var r : Run
     begin
         new(r)
-        r.name := name
+        copy(r.name,name)
         r.numIterations := 1
         r.innerIterations := 1
         r.total := 0
@@ -44,7 +44,7 @@ module Run
         return r
     end create
     
-    proc getSuiteFromName( in name : array of char ) : B.Benchmark
+    proc getSuiteFromName( const name : array of char ) : B.Benchmark
     begin
     (*
         if name = "Permute" then
@@ -65,20 +65,18 @@ module Run
             return Towers.create()
         elsif name = "Richards" then
             return Richards.create()
-        elsif name = "Json" then
-            return Json.create()
         elsif name = "NBody" then
             return NBody.create()
-        elsif name = "CD2" then
-            return CD2.create()
-        elsif name = "CD" then
-            return CD.create()
-        elsif name = "Havlak" then
-            return Havlak.create()
         elsif name = "DeltaBlue" then
             return DeltaBlue.create()
-        end
         *)
+        if equals(name,"Json") then
+            return Json.create()
+        elsif equals(name,"CD") then
+            return CD.create()
+        elsif equals(name,"Havlak") then
+            return Havlak.create()
+        end
         return nil
     end getSuiteFromName
     
@@ -142,7 +140,7 @@ module Run
     
     proc (this: Run) printResult(runTime: integer)
     begin
-        return // TODO
+        return; // TODO
         Out.String(this.name)
         Out.String(": iterations=1 runtime: ")
         Out.Int(runTime,0)
@@ -152,7 +150,7 @@ module Run
         
     proc (this: Run) printTotal*()
     begin
-        return // TODO
+        return; // TODO
         Out.String("Total Runtime: ")
         Out.Int(this.total,0)
         Out.String("us")

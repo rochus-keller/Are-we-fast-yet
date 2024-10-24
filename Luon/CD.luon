@@ -23,7 +23,7 @@
 
 // this version uses only dynamically allocated records (like the original version)
 
-module CD2
+module CD
 
     import B := Benchmark, Out
 
@@ -54,7 +54,7 @@ module CD2
         var simulator: Simulator
             detector: CollisionDetector
             actualCollisions, i: integer
-            time: longreal
+            time: real
             collisions: OV.Vector
     begin
        simulator := createSimulator(numAircrafts)
@@ -122,7 +122,7 @@ module CD2
 
     /////// Vector2D ////////////////////////
     type 
-        Vector2D* = record x*,y*: longreal end
+        Vector2D* = record x*,y*: real end
     
     proc (this: Vector2D) plus( other: Vector2D ): Vector2D
         var res: Vector2D
@@ -142,7 +142,7 @@ module CD2
         return res
     end minus
     
-    proc compareVector2D*(in lhs, rhs: Vector2D ): integer
+    proc compareVector2D*(const lhs, rhs: Vector2D ): integer
         var result: integer
     begin
     result := compareNumbers(lhs.x, rhs.x)
@@ -152,7 +152,7 @@ module CD2
     return compareNumbers(lhs.y, rhs.y)
     end compareVector2D 
     
-    proc compareNumbers(a,b: longreal): integer
+    proc compareNumbers(a,b: real): integer
     begin
         if a = b then
           return 0
@@ -173,7 +173,7 @@ module CD2
     
     ///////// Vector3D ////////
     type
-        Vector3D* = record x*,y*,z*: longreal end
+        Vector3D* = record x*,y*,z*: real end
         
     proc (this: Vector3D) plus( other: Vector3D ): Vector3D
         var res: Vector3D
@@ -195,7 +195,7 @@ module CD2
         return res
     end minus
     
-    proc (this: Vector3D) times( amount: longreal ): Vector3D
+    proc (this: Vector3D) times( amount: real ): Vector3D
         var res: Vector3D
     begin
         new(res)
@@ -205,26 +205,26 @@ module CD2
         return res
     end times
     
-    proc (this: Vector3D) dot(other: Vector3D): longreal
+    proc (this: Vector3D) dot(other: Vector3D): real
     begin
         return this.x * other.x + this.y * other.y + this.z * other.z 
     end dot
 
-    proc (this: Vector3D) squaredMagnitude(): longreal
+    proc (this: Vector3D) squaredMagnitude(): real
     begin
         return this.dot(this) 
     end squaredMagnitude
   
-    proc (this: Vector3D) magnitude(): longreal
+    proc (this: Vector3D) magnitude(): real
     begin
-        return Math.sqrt(short(this.squaredMagnitude())) 
+        return Math.sqrt(this.squaredMagnitude())
     end magnitude
   
    ///////// CallSign /////////////
    type 
        CallSign = record value: integer end
        
-    proc compareCallSign( in lhs, rhs: CallSign ): integer
+    proc compareCallSign( const lhs, rhs: CallSign ): integer
     begin
         if lhs.value = rhs.value then
             return 0
@@ -275,7 +275,7 @@ module CD2
         return sim
     end createSimulator
     
-    proc (this: Simulator) simulate(time: longreal): AV.Vector
+    proc (this: Simulator) simulate(time: real): AV.Vector
         var frame: AV.Vector
             i: integer
             ac: Aircraft
@@ -286,14 +286,14 @@ module CD2
             new(ac.position)
             ac.callsign := this.aircraft.at(i)
             ac.position.x := time
-            ac.position.y := Math.cos(short(time)) * 2.0 + flt(i) * 3.0
+            ac.position.y := Math.cos(time) * 2.0 + flt(i) * 3.0
             ac.position.z := 10
           frame.append(ac)
             new(ac)
             new(ac.position)
             ac.callsign := this.aircraft.at(i+1)
             ac.position.x := time
-            ac.position.y := Math.sin(short(time)) * 2.0 + flt(i) * 3.0
+            ac.position.y := Math.sin(time) * 2.0 + flt(i) * 3.0
             ac.position.z := 10
           frame.append(ac)
       end
@@ -307,7 +307,7 @@ module CD2
                         posOne, posTwo: Vector3D
                     end
                     
-    proc createMotion( in callsign: CallSign; posOne, posTwo: Vector3D ): Motion
+    proc createMotion( const callsign: CallSign; posOne, posTwo: Vector3D ): Motion
         var m: Motion
     begin
         new(m)
@@ -324,7 +324,7 @@ module CD2
 
     proc (this: Motion) findIntersection(other: Motion ): Vector3D
         var init1, init2, vec1, vec2, result1, result2, result: Vector3D
-            radius, a, b, c, discr, v, v1, v2, dist: longreal
+            radius, a, b, c, discr, v, v1, v2, dist: real
     begin
     init1 := this.posOne
     init2 := other.posOne
@@ -377,8 +377,8 @@ module CD2
         return nil
       end
 
-      v1 := (-b - Math.sqrt(short(discr))) / (2.0 * a)
-      v2 := (-b + Math.sqrt(short(discr))) / (2.0 * a)
+      v1 := (-b - Math.sqrt(discr)) / (2.0 * a)
+      v2 := (-b + Math.sqrt(discr)) / (2.0 * a)
 
       if (v1 <= v2) & (((v1  <= 1.0) & (1.0 <= v2)) or
                        ((v1  <= 0.0) & (0.0 <= v2)) or
@@ -442,7 +442,7 @@ module CD2
                                       seen: RCB.RedBlackTree
                                       end
       
-      proc (this: ForEachInterface) apply(in elem: RCV.Entry) 
+      proc (this: ForEachInterface) apply(const elem: RCV.Entry) 
       begin
           if ~this.seen.get(elem.key) then
              this.toRemove.append(elem.key)
@@ -514,7 +514,7 @@ module CD2
     proc isInVoxel(voxel: Vector2D; motion: Motion ): boolean
         var init, fin: Vector3D
             v_s, r, v_x, x0, xv, v_y, y0, yv, low_x, high_x, tmp,
-                low_y, high_y: longreal
+                low_y, high_y: real
     begin
     if (voxel.x > MAX_X) or
         (voxel.x < MIN_X) or
@@ -582,7 +582,7 @@ module CD2
       type
           ForEachInterface = record (RVV.ForEachInterface) result: VV.Vector end
       
-      proc (this: ForEachInterface) apply(in elem: RVV.Entry) 
+      proc (this: ForEachInterface) apply(const elem: RVV.Entry) 
       begin
           if elem.value.getSize() > 1 then
               this.result.append(elem.value)
@@ -632,11 +632,11 @@ module CD2
   
   proc voxelHash*(position: Vector3D): Vector2D 
       var xDiv, yDiv: integer
-          x,y: longreal
+          x,y: real
           res: Vector2D
   begin
-    xDiv := short(floor(position.x / GOOD_VOXEL_SIZE))
-    yDiv := short(floor(position.y / GOOD_VOXEL_SIZE))
+    xDiv := floor(position.x / GOOD_VOXEL_SIZE)
+    yDiv := floor(position.y / GOOD_VOXEL_SIZE)
 
     x := GOOD_VOXEL_SIZE * flt(xDiv)
     y := GOOD_VOXEL_SIZE * flt(yDiv)
@@ -669,4 +669,4 @@ begin
     new(vertical)
     vertical.x := 0.0
     vertical.y := GOOD_VOXEL_SIZE    
-end CD2
+end CD

@@ -54,7 +54,7 @@ module DeltaBlue
         return s
     end createSym
     
-    proc symHash(in k: Sym):integer
+    proc symHash(const k: Sym):integer
     begin
         return k.hash 
     end symHash
@@ -77,8 +77,8 @@ module DeltaBlue
      * pointer comparison can be used for value comparison.
    *)
     import 
-        SID := som.IdentityDictionary2(Sym,integer,symHash)
-        SSD := som.IdentityDictionary2(Sym,Strength,symHash)
+        SID := som.IdentityDictionary(Sym,integer,symHash)
+        SSD := som.IdentityDictionary(Sym,Strength,symHash)
     type
         Strength = record
                             arithmeticValue: integer
@@ -149,7 +149,7 @@ module DeltaBlue
         this.strength := strengthConstant.at(strength)
     end initAbstractConstraint
     
-    proc equalConstraint(in lhs, rhs: AbstractConstraint): boolean
+    proc equalConstraint(const lhs, rhs: AbstractConstraint): boolean
     begin
         return lhs = rhs 
     end equalConstraint
@@ -196,7 +196,7 @@ module DeltaBlue
 
     proc (this: AbstractConstraint) inputsKnown(mark: integer): boolean
         type TI = record(IV.TestInterface) mark: integer end
-        proc (this: TI) test(in v: Variable) : boolean 
+        proc (this: TI) test(const v: Variable) : boolean 
         begin
             return ~( (v.mark = this.mark) or v.stay or (v.determinedBy = nil) ) 
         end test
@@ -553,13 +553,13 @@ module DeltaBlue
   // unsatisfied constraints sorted in order of decreasing strength.
   proc (this: Planner) removePropagateFrom(out: Variable): ACV.Vector
       type FI = record(IAC.ForEachInterface) todo: VAV.Vector end
-      proc (this: FI) apply(in c: AbstractConstraint) 
+      proc (this: FI) apply(const c: AbstractConstraint) 
       begin
           c.recalculate()
         this.todo.append(c.getOutput())
       end apply
       type IC = record(IAC.Comparator) end
-      proc (this: IC) compare( in c1,c2: AbstractConstraint ) : integer 
+      proc (this: IC) compare( const c1,c2: AbstractConstraint ) : integer 
       begin
        if c1.strength.stronger(c2.strength) then
            return -1

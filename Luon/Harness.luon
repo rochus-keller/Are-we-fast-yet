@@ -26,7 +26,7 @@ module Harness
     
     type Args* = array of array of char
     
-    proc processArguments(in args : Args) : Run.Run
+    proc processArguments(const args : Args) : Run.Run
         var r : Run.Run
     begin
         r := Run.create(args[0])    
@@ -51,7 +51,7 @@ module Harness
         Out.String("                   which is measured in total, default: 1") Out.Ln
     end printUsage
     
-    proc main*( in args : Args )
+    proc main*( const args : Args )
         var r: Run.Run
     begin
         if len(args) < 1 then
@@ -63,7 +63,7 @@ module Harness
         r.printTotal
     end main
     
-    proc run*( in what : array of char; numIterations, innerIterations: integer )
+    proc run*( const what : array of char; numIterations, innerIterations: integer )
         var r : Run.Run
     begin
         r := Run.create(what)

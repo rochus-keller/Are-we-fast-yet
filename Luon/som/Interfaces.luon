@@ -25,7 +25,7 @@
 
     type ForEachInterface* = record end
 
-    proc (this: ForEachInterface) apply*(in elem: E) end 
+    proc (this: ForEachInterface) apply*(const elem: E) end 
     
     type ForEachInterfaceRW* = record end
 
@@ -33,10 +33,10 @@
     
     type TestInterface* = record end
     
-    proc (this: TestInterface) test*(in elem: E) : boolean end
+    proc (this: TestInterface) test*(const elem: E) : boolean end
     
     type Comparator* = record end
     
-    proc (this: Comparator) compare*( in i,j: E ) : integer end
+    proc (this: Comparator) compare*(const i,j: E) : integer end
             
 end Interfaces
