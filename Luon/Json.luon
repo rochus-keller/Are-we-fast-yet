@@ -255,7 +255,7 @@ module Json
             str: String
     begin
        index := this.table.get(name)
-       if (index # -1) & equals(name, this.names.at(index)) then
+       if (index # -1) & (name = this.names.at(index)) then
           return index
        else
            halt(0)
@@ -294,9 +294,9 @@ module Json
     begin
         new(l) 
         l.value := string
-        l._null := equals( string, "null" )
-        l._true := equals( string, "true" )
-        l._false := equals( string, "false" )
+        l._null := string = "null"
+        l._true := string = "true"
+        l._false := string = "false"
         return l
     end createLiteral
     
