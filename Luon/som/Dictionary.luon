@@ -250,7 +250,7 @@ module Dictionary(K,V; const hf: HashFunc)
            i: integer
            current: Entry
     begin
-        keys := KV.createWithSize(this.size)
+       keys := KV.createWithSize(this.size)
        for i := 0 to len(this.buckets)-1 do
           current := this.buckets[i]
          while current # nil do
@@ -266,13 +266,13 @@ module Dictionary(K,V; const hf: HashFunc)
            i: integer
            current: Entry
     begin
-        values := VV.createWithSize(this.size)
+       values := VV.createWithSize(this.size)
        for i := 0 to len(this.buckets)-1 do
           current := this.buckets[i]
-         while current # nil do
+          while current # nil do
              values.append(current.value)
             current := current.next
-         end
+          end
       end
       return values
    end getValues

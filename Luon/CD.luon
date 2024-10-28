@@ -287,14 +287,14 @@ module CD
             ac.callsign := this.aircraft.at(i)
             ac.position.x := time
             ac.position.y := Math.cos(time) * 2.0 + flt(i) * 3.0
-            ac.position.z := 10
+            ac.position.z := 10.0
           frame.append(ac)
             new(ac)
             new(ac.position)
             ac.callsign := this.aircraft.at(i+1)
             ac.position.x := time
             ac.position.y := Math.sin(time) * 2.0 + flt(i) * 3.0
-            ac.position.z := 10
+            ac.position.z := 10.0
           frame.append(ac)
       end
         return frame
@@ -610,7 +610,7 @@ module CD
   proc recurse(voxelMap: RVV.RedBlackTree; seen: RVB.RedBlackTree; 
                   nextVoxel: Vector2D; motion: Motion )
   begin
-    if ~isInVoxel(nextVoxel, motion) then
+    if not isInVoxel(nextVoxel, motion) then
       return
     end
 
