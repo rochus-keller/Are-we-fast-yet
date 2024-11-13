@@ -26,7 +26,7 @@ module Richards
         var res: B.BoolResult
             s : Scheduler
     begin
-        new(s)
+       s := createScheduler()
        new(res)
        res.res := s.start()
        return res    
@@ -85,6 +85,7 @@ module Richards
         p.link := link
         p.identity := identity
         p.kind := kind
+        new(p.data)
         return p
     end createPacket
     
@@ -312,7 +313,7 @@ module Richards
                             taskList, currentTask: TaskControlBlock
                             currentTaskIdentity: Destination
                             queuePacketCount, holdCount, layout: integer
-                            taskTable: array ord(NUM_TYPES) of TaskControlBlock
+                            taskTable: array of TaskControlBlock
                         end
     var TRACING: boolean
                     
@@ -325,6 +326,7 @@ module Richards
         s.queuePacketCount := 0
         s.holdCount := 0
         s.taskList := NO_TASK
+        new(s.taskTable,ord(NUM_TYPES))
         for i := 0 to ord(NUM_TYPES)-1 do
             s.taskTable[i] := NO_TASK // actually not necessary
         end
@@ -334,11 +336,12 @@ module Richards
    proc (this: Scheduler) createTask(identity: Destination; priority: integer;
           work: Packet; state: TaskState; aBlock: ProcessFunction; data: RBObject ) 
         var t: TaskControlBlock
+           i: integer
     begin
         t := createTaskControlBlock(this.taskList, identity,
-        priority, work, state, aBlock, data)
-       this.taskList := t
-      this.taskTable[ord(identity)] := t 
+                       priority, work, state, aBlock, data)
+        this.taskList := t
+        this.taskTable[ord(identity)] := t 
     end createTask
       
     proc (this: Scheduler) createDevice(identity: Destination; priority: integer;
@@ -373,9 +376,9 @@ module Richards
          
        var func: PF
    begin
-      data := createDeviceTaskDataRecord()
-      new(func)
-        func.s := this
+       data := createDeviceTaskDataRecord()
+       new(func)
+       func.s := this
        this.createTask(identity, priority, workPacket, state, func, data)
     end createDevice
   

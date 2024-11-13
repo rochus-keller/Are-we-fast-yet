@@ -94,6 +94,7 @@ type
         var t : TestInterface
         
     begin
+        new(t)
         t.obj := obj
         return this.hasSome(t)
     end contains

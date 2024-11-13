@@ -159,6 +159,7 @@ module NBody
             px,py,pz: real
     begin
         new(s)
+        new(s.bodies)
         
         s.bodies[0] := sun()
         s.bodies[1] := jupiter()

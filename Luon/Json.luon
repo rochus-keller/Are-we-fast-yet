@@ -289,14 +289,26 @@ module Json
                                 _null, _true, _false: boolean
                             end
                             
-    proc createLiteral( string: String): JsonLiteral
+    proc equals(lhs, rhs: array of char):boolean
+    var l1, l2, i: integer
+    begin
+       l1 := strlen(lhs)
+       l2 := strlen(rhs)
+       if l1 # l2 then return false end
+       for i := 0 to l1 - 1 do
+          if lhs[i] # rhs[i] then return false end
+       end
+       return true
+    end equals
+           
+    proc createLiteral( str: String): JsonLiteral
         var l: JsonLiteral
     begin
         new(l) 
-        l.value := string
-        l._null := string = "null"
-        l._true := string = "true"
-        l._false := string = "false"
+        l.value := str
+        l._null := equals(str,"null")
+        l._true := equals(str,"true")
+        l._false := equals(str,"false")
         return l
     end createLiteral
     

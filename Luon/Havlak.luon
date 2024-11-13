@@ -252,6 +252,7 @@ module Havlak
               end
               node := node.parent
         end
+        new(iter)
         iter.parent := this.parent
         nodeList.forEach(iter)
         return node
@@ -304,6 +305,7 @@ module Havlak
         var liter: FI
     begin
        // link up all 1st level loops to artificial root node.
+       new(liter)
        liter.root := this.root
        this.loops.forEach(liter)
 
@@ -323,6 +325,7 @@ module Havlak
         end apply
         var liter: FI
    begin
+       new(liter)
        liter.this := this
        liter.looop := looop
        liter.depth := depth
@@ -467,7 +470,7 @@ module Havlak
         VSI := som.Vector(SI.Set)
         VI := som.Vector(integer)
         VVI := som.Vector(VI.Vector)
-        ID := som.IdentityDictionary(BasicBlock,integer,hashBasicBlock)
+        ID := som.IdentityDictionary(BasicBlock,integer)
     const 
         UNVISITED = max(integer)
         MAXNONBACKPREDS = 32 * 1024
@@ -502,7 +505,7 @@ module Havlak
         this.maxSize := 0
         this.nonBackPreds := VSI.create()
         this.backPreds := VVI.create()
-        this.number := ID.create()
+        this.number := ID.create(hashBasicBlock)
         return this
     end createHavlakLoopFinder        
     
@@ -552,6 +555,7 @@ module Havlak
         var iter: FI
             dummy: integer
     begin
+        new(iter)
         iter.number := this.number
         this.cfg.basicBlockMap.forEach(iter)
        dummy := this.doDFS(this.cfg.startNode, 0)
@@ -601,6 +605,7 @@ module Havlak
       end apply
         var iter: FI
     begin
+     new(iter)
      iter.this := this
      iter.w := w
     if nodeW.inEdges.getSize() > 0 then
@@ -685,6 +690,7 @@ module Havlak
         // Copy nodePool to workList.
         //
         workList := UNV.create()
+        new(niter)
         niter.workList := workList
         nodePool.forEach(niter)
 
@@ -753,6 +759,7 @@ module Havlak
           this.this.nonBackPreds.at(this.w).add(ydash.dfsNumber)
       else
         if ydash.dfsNumber # this.w then
+          new(iter)
            iter.ydash := ydash
           if ~this.nodePool.hasSome(iter) then
             this.workList.append(ydash)
@@ -763,6 +770,7 @@ module Havlak
       end apply
       var iter: FI
   begin
+      new(iter)
       iter.this := this
       iter.nodePool := nodePool
       iter.workList := workList
@@ -804,6 +812,7 @@ module Havlak
     var iter: FI
   begin
     this.nodes[w].looop := looop
+    new(iter)
     iter.this := this
     iter.w := w
     iter.looop := looop
@@ -826,6 +835,7 @@ module Havlak
       end apply
       var iter: FI
   begin
+      new(iter)
       iter.this := this
       iter.w := w
       iter.nodePool := nodePool

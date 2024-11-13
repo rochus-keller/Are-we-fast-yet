@@ -36,6 +36,10 @@ module Queens
         var q : Queens
     begin
         new(q)
+        new(q.freeRows)
+        new(q.freeMaxs)
+        new(q.freeMins)
+        new(q.queenRows)
         return q
     end create
 
@@ -46,7 +50,7 @@ module Queens
     begin
         result := true
        for i := 0 to 10-1 do
-          result := result & this.queens()
+          result := result and this.queens()
        end
        new(res)
        res.res := result
@@ -56,7 +60,7 @@ module Queens
     proc (this: Queens) queens(): boolean
         var i: integer
     begin
-        for i := 0 to len(this.freeRows)-1 do
+        for i := 0 to len(this.freeRows)-1 do  
             this.freeRows[i] := true
             this.queenRows[i] := -1
         end
@@ -70,23 +74,23 @@ module Queens
     proc (this: Queens) placeQueen(c: integer): boolean
         var r: integer
     begin
-    for r := 0 to 8-1 do
-      if this.getRowColumn(r, c) then
-        this.queenRows[r] := c
-        this.setRowColumn(r, c, false)
-
-        if c = 7 then
-          return true
-        end
-
-        if this.placeQueen(c + 1) then
-          return true
-        end
-        this.setRowColumn(r, c, true)
-      end
-    end
-    return false
-  end placeQueen
+       for r := 0 to 8-1 do
+         if this.getRowColumn(r, c) then
+           this.queenRows[r] := c
+           this.setRowColumn(r, c, false)
+   
+           if c = 7 then
+             return true
+           end
+   
+           if this.placeQueen(c + 1) then
+             return true
+           end
+           this.setRowColumn(r, c, true)
+         end
+       end
+       return false
+     end placeQueen
 
   proc (this: Queens) getRowColumn(r, c: integer): boolean
   begin

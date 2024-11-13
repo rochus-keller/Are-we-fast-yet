@@ -21,7 +21,7 @@
  * THE SOFTWARE.
  *)
 
-module Dictionary(K,V; const hf: HashFunc)
+module Dictionary(K,V)
 
     import KV := Vector(K)
         VV := Vector(V)
@@ -59,11 +59,15 @@ module Dictionary(K,V; const hf: HashFunc)
         Dictionary* = record
                             buckets: array of Entry 
                             size: integer
+                            hf: HashFunc
                         end
                         
-    proc create*(): Dictionary  
+    proc create*(hf: HashFunc): Dictionary  
+    var d: Dictionary
     begin          
-        return createWithSize(INITIAL_CAPACITY) 
+        d := createWithSize(INITIAL_CAPACITY) 
+        d.hf := hf
+        return d
     end create
     
     proc createWithSize*(size: integer): Dictionary            
@@ -78,7 +82,7 @@ module Dictionary(K,V; const hf: HashFunc)
     proc (this: Dictionary) hash(const key: K ): integer
         var h: integer
     begin
-        h := hf(key)
+        h := this.hf(key)
         // not supported in OBX: h := key.customHash()
        return bitxor( h, bitshr(h, 16) )
    end hash

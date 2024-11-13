@@ -22,20 +22,21 @@
  *)
  
 module Run
-    import B := Benchmark, Out, Input, Json, CD, Havlak, Richards, DeltaBlue, NBody,
-    			Permute, Bounce, List, Mandelbrot, Queens, Sieve, Storage, Towers
-    
+    import B := Benchmark, Out, Input, Permute, List, Mandelbrot,
+                Queens, Sieve, Towers, Bounce, Storage, NBody,
+                Richards, CD, DeltaBlue, Havlak (*, Json*)
+                 
     type Run* = record
-                                name : array 32 of char
-                                benchmarkSuite : B.Benchmark
-                                numIterations, innerIterations, total : integer
-                            end
+                  name : array 32 of char
+                  benchmarkSuite : B.Benchmark
+                  numIterations, innerIterations, total : integer
+               end
                             
     proc create*( const name : array of char ) : Run
         var r : Run
     begin
         new(r)
-        copy(r.name,name)
+        copy(r.name, name)
         r.numIterations := 1
         r.innerIterations := 1
         r.total := 0
@@ -43,12 +44,10 @@ module Run
         return r
     end create
     
-    proc getSuiteFromName( const name : array of char ) : B.Benchmark
+    proc getSuiteFromName( const name : string ) : B.Benchmark
     begin
         if name = "Permute" then
             return Permute.create()
-        elsif name = "Bounce" then
-            return Bounce.create()
         elsif name = "List" then
             return List.create()
         elsif name = "Mandelbrot" then
@@ -57,22 +56,24 @@ module Run
             return Queens.create()
         elsif name = "Sieve" then
             return Sieve.create()
-        elsif name = "Storage" then
-            return Storage.create()
         elsif name = "Towers" then
             return Towers.create()
+        elsif name = "Bounce" then
+            return Bounce.create()
+        elsif name = "Storage" then
+            return Storage.create()
         elsif name = "NBody" then
-            return NBody.create()
-        elsif name = "Json" then
-            return Json.create()
-        elsif name = "CD" then
-            return CD.create()
-        elsif name = "Havlak" then
-            return Havlak.create()
+            return NBody.create() 
         elsif name = "Richards" then
             return Richards.create()
+        elsif name = "CD" then
+            return CD.create()
         elsif name = "DeltaBlue" then
-            return DeltaBlue.create()
+            return DeltaBlue.create()        
+        elsif name = "Havlak" then
+            return Havlak.create()
+        (*elsif name = "Json" then
+            return Json.create()*)
         end
         return nil
     end getSuiteFromName

@@ -42,6 +42,7 @@ module Sieve
             i, result: integer
             res : B.IntResult
     begin
+        new(flags)
         for i := 0 to size-1 do
             flags[i] := true
         end

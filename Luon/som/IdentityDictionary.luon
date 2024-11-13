@@ -21,20 +21,22 @@
  * THE SOFTWARE.
  *)
 
-module IdentityDictionary(K,V; const hf: HashFunc)
+module IdentityDictionary(K,V)
 
-    import D := Dictionary(K,V,hf)
-    
     type
         HashFunc* = proc(const k: K):integer
+        
+    import D := Dictionary(K,V)
+    
+    type
         IdentityDictionary* = D.Dictionary
         
     // NOTE this is identical to Dictionary; don't know why a separate module is implemented,
     // overriding Entry makes no sense, Entry.match is identical
     
-    proc create*(): IdentityDictionary
+    proc create*(hf: HashFunc): IdentityDictionary
     begin
-        return D.create() 
+        return D.create(hf) 
     end create
     
     proc createWithSize*(size: integer): IdentityDictionary

@@ -266,6 +266,7 @@ module CD
             cs: CallSign
     begin
         new(sim)
+        new(sim.aircraft)
         sim.aircraft := CV.create()
         for i := 0 to numAircraft-1 do
             new(cs)
@@ -429,6 +430,7 @@ module CD
       var cd: CollisionDetector
     begin
         new(cd)
+        new(cd.state)
         cd.state := RCV.create(compareCallSign)
         return cd
     end createCD
@@ -483,6 +485,7 @@ module CD
 
     // Remove aircraft that are no longer present.
     toRemove := CV.create()
+    new(it)
     it.toRemove := toRemove
     it.seen := seen
     this.state.forEach(it)
@@ -601,6 +604,7 @@ module CD
     end
     
     result := VV.create()
+    new(it)
     it.result := result
     voxelMap.forEach(it)
 

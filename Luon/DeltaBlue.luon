@@ -77,8 +77,8 @@ module DeltaBlue
      * pointer comparison can be used for value comparison.
    *)
     import 
-        SID := som.IdentityDictionary(Sym,integer,symHash)
-        SSD := som.IdentityDictionary(Sym,Strength,symHash)
+        SID := som.IdentityDictionary(Sym,integer)
+        SSD := som.IdentityDictionary(Sym,Strength)
     type
         Strength = record
                             arithmeticValue: integer
@@ -202,6 +202,7 @@ module DeltaBlue
         end test
         var i: TI
     begin
+        new(i)
         i.mark := mark
         return ~this.inputsHasOne(i)
     end inputsKnown
@@ -240,6 +241,7 @@ module DeltaBlue
     if this.isSatisfied() then
       // constraint can be satisfied
       // mark inputs to allow cycle detection in addPropagate
+      new(iter)
       iter.mark := mark
       this.inputsDo(iter)
 
@@ -256,7 +258,7 @@ module DeltaBlue
     else
       overridden := nil
       if this.strength.sameAs(required) then
-        assert(false) // "Could not satisfy a required constraint"
+        // TODO assert(false) // "Could not satisfy a required constraint"
       end
     end
     return overridden
@@ -592,11 +594,12 @@ module DeltaBlue
             unsatisfied.append(c)
          end
        end
-
-        iter1.todo := todo
-      this.constraintsConsuming(v, iter1)
+         
+       new(iter1)
+       iter1.todo := todo
+       this.constraintsConsuming(v, iter1)
     end
-
+    new(iter2)
     unsatisfied.sort(iter2)
     return unsatisfied;
   end removePropagateFrom
@@ -647,7 +650,7 @@ module DeltaBlue
       vars[0].value := i
       plan.execute()
       if vars[n].value # i then
-        assert(false) // "Chain test failed!"
+        // TODO assert(false) // "Chain test failed!"
       end
     end
     editC.destroyConstraint(planner)
@@ -1049,7 +1052,7 @@ begin
     WEAK_DEFAULT := createSym(6)
     ABSOLUTE_WEAKEST := createSym(7)
     
-    strengthTable := SID.create()
+    strengthTable := SID.create(symHash)
     strengthTable.atPut(ABSOLUTE_STRONGEST, -10000)
     strengthTable.atPut(REQUIRED,           -800)
     strengthTable.atPut(STRONG_PREFERRED,   -600)
@@ -1059,7 +1062,7 @@ begin
     strengthTable.atPut(WEAK_DEFAULT,       500)
     strengthTable.atPut(ABSOLUTE_WEAKEST,   10000)
 
-    strengthConstant := SSD.create()
+    strengthConstant := SSD.create(symHash)
     strengthConstant.atPut(ABSOLUTE_STRONGEST, createStrength(ABSOLUTE_STRONGEST))
     required          := createStrength(REQUIRED)
     strengthConstant.atPut(REQUIRED,           required)

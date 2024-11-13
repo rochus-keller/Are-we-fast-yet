@@ -107,6 +107,7 @@ module RedBlackTree(K,V)
         var insertionResult: InsertResult
             x,y: Node
     begin
+    new(insertionResult)
     this.treeInsert(key, value,insertionResult)
     if ~insertionResult.isNewEntry then
         newEntry := false
@@ -252,6 +253,7 @@ module RedBlackTree(K,V)
       return
     end
     current := treeMinimum(this.root)
+    new(e)
     while current # nil do
         e.key := current.key
         e.value := current.value

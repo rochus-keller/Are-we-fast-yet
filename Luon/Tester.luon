@@ -25,13 +25,61 @@ module Tester
 import 
     H := Harness
     
+    B := som.RedBlackTree(integer,string)
+    IB := som.Interfaces(B.Entry)
+
+    proc Test4()
+        var t : B.RedBlackTree
+            s : string
+        proc intComp(const lhs,rhs: integer): integer
+        begin
+            if lhs < rhs then
+                return -1
+            elsif lhs > rhs then
+                return 1
+            else
+                return 0
+            end
+        end intComp
+        
+        type FI = record (IB.ForEachInterface) i: integer end
+        
+        proc (this: FI) apply(const elem: B.Entry) 
+        begin
+            print(elem.key)
+            print("=")
+            println(elem.value)
+        end apply
+        
+        var it : FI
+    begin
+        t := B.create(intComp)
+        
+        s := t.put( 10, "Mandelbrot")
+        s := t.put( 3, "Nbody")    
+        s := t.put( 6, "Permute")    
+        s := t.put( 2, "Queens")    
+        s := t.put( 4, "Richards")    
+        s := t.put( 8, "Sieve")    
+        s := t.put( 11, "Storage")    
+        s := t.put( 9, "Tower")    
+        s := t.put( 3, "Json")    
+        s := t.remove(11)
+        
+        new(it)
+        it.i := 33
+        t.forEach(it)
+        
+        println("Done Test4")
+    end Test4
+    
     proc RunAll()
     begin
        H.run("DeltaBlue", 12000, 1 )
        H.run("Richards", 100, 1)
        H.run("Json", 100, 1)
        H.run("Havlak", 10, 1 )
-       H.run("CD2", 250, 2)
+       H.run("CD", 250, 2)
        H.run("Bounce", 1500, 1)
        H.run("List", 1500, 1)
        H.run("Mandelbrot", 500, 1)
@@ -49,7 +97,6 @@ import
        H.run("Richards", 1, 1)
        H.run("Json", 1, 1)
        H.run("Havlak", 1, 1 )
-       H.run("CD2", 1, 2)
        H.run("Bounce", 1, 1)
        H.run("List", 1, 1)
        H.run("Mandelbrot", 1, 1)
@@ -62,9 +109,8 @@ import
     end RunEachOnce
 
 begin
-   
    RunAll()
    //RunEachOnce()
-
+   // all work besides Json
 
 end Tester
