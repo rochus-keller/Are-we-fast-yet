@@ -258,7 +258,7 @@ module DeltaBlue
     else
       overridden := nil
       if this.strength.sameAs(required) then
-        // TODO assert(false) // "Could not satisfy a required constraint"
+        assert(false) // "Could not satisfy a required constraint"
       end
     end
     return overridden
@@ -650,7 +650,7 @@ module DeltaBlue
       vars[0].value := i
       plan.execute()
       if vars[n].value # i then
-        // TODO assert(false) // "Chain test failed!"
+        assert(false) // "Chain test failed!"
       end
     end
     editC.destroyConstraint(planner)

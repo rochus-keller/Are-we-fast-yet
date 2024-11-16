@@ -22,9 +22,26 @@
  *)
  
 module Run
-    import B := Benchmark, Out, Input, Permute, List, Mandelbrot,
-                Queens, Sieve, Towers, Bounce, Storage, NBody,
-                Richards, CD, DeltaBlue, Havlak (*, Json*)
+    import B := Benchmark, Out, Input 
+                <* if not NoMicro then *>
+                ,Permute, List, Mandelbrot, Queens, Sieve, 
+                Towers, Bounce, Storage, NBody,
+                <* end *>
+                <* if not NoRichards then *>
+                Richards
+                <* end *>
+                <* if not NoCD then *>
+                , CD
+                <* end *>
+                <* if not NoDeltaBlue then *>
+                , DeltaBlue
+                <* end *>
+                <* if not NoHavlak then *>
+                , Havlak 
+                <* end *>
+                <* if not NoJson then *>
+                , Json 
+                <* end *>
                  
     type Run* = record
                   name : array 32 of char
@@ -46,7 +63,9 @@ module Run
     
     proc getSuiteFromName( const name : string ) : B.Benchmark
     begin
-        if name = "Permute" then
+        if false then
+        <* if ~NoMicro then *>
+        elsif name = "Permute" then
             return Permute.create()
         elsif name = "List" then
             return List.create()
@@ -64,16 +83,27 @@ module Run
             return Storage.create()
         elsif name = "NBody" then
             return NBody.create() 
+        <* end *>
+        <* if ~NoRichards then *>
         elsif name = "Richards" then
             return Richards.create()
+        <* end *>
+        <* if ~NoCD then *>
         elsif name = "CD" then
             return CD.create()
+        <* end *>
+        <* if ~NoDeltaBlue then *>
         elsif name = "DeltaBlue" then
             return DeltaBlue.create()        
+        <* end *>
+        <* if ~NoHavlak then *>
         elsif name = "Havlak" then
             return Havlak.create()
-        (*elsif name = "Json" then
-            return Json.create()*)
+        <* end *>
+        <* if ~NoJson then *>
+        elsif name = "Json" then
+            return Json.create()
+        <* end *>
         end
         return nil
     end getSuiteFromName
@@ -87,7 +117,7 @@ module Run
         
         if this.benchmarkSuite = nil then
             Out.String("ERROR unknown benchmark ")
-            Out.String(this.name) Out.Ln 
+            Out.String(this.name) Out.Ln Out.Ln
             return
         end
         if ~this.doRuns(this.benchmarkSuite) then

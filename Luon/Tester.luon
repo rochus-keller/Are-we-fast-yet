@@ -25,8 +25,16 @@ module Tester
 import 
     H := Harness
     
+    <* if HaveTests then *>
     B := som.RedBlackTree(integer,string)
     IB := som.Interfaces(B.Entry)
+    RVV := som.RedBlackTree(Vector2D,SV.Vector)
+    IVV := som.Interfaces(RVV.Entry)
+    SV := som.Vector(String)
+
+    type
+        String = array 32 of char
+        Vector2D = record x,y: real end
 
     proc Test4()
         var t : B.RedBlackTree
@@ -73,6 +81,91 @@ import
         println("Done Test4")
     end Test4
     
+    proc compareVector2D(const lhs, rhs: Vector2D ): integer
+        var result: integer
+    begin
+    result := compareNumbers(lhs.x, rhs.x)
+    if result # 0 then
+      return result
+    end
+    return compareNumbers(lhs.y, rhs.y)
+    end compareVector2D 
+
+    proc compareNumbers(a,b: real): integer
+    begin
+        if a = b then
+          return 0
+        end
+        if a < b then
+          return -1
+        end
+        if a > b then
+          return 1
+        end
+    
+        // We say that NaN is smaller than non-NaN.
+        if a = a then
+          return 1
+        end
+        return -1
+    end compareNumbers
+
+    proc Test5()
+        var t : RVV.RedBlackTree
+        
+        type FI = record (IVV.ForEachInterface) i: integer end
+        
+        proc (this: FI) apply(CONST elem: RVV.Entry) 
+            var i: integer
+        begin
+            print("Point ")
+            print(elem.key.x)
+            print(":")
+            println(elem.key.y)
+            for i := 0 to elem.value.getSize()-1 do
+                println(elem.value.at(i))
+            end
+        end apply
+        
+        var it : FI
+            point: Vector2D
+            vec: SV.Vector
+    begin
+        new(point)
+        t := RVV.create(compareVector2D)
+        
+        vec := SV.create()
+        vec.append("Mandelbrot")
+        vec.append("Nbody")
+        vec.append("Permute")
+        point.x := 10.0
+        point.y := 20.0
+        vec := t.put( point, vec)
+
+        vec := SV.create()
+        vec.append("Queens")
+        vec.append("Richards")
+        vec.append("Sieve")
+        point.x := 30.0
+        point.y := 40.0
+        vec := t.put( point, vec)
+
+        vec := SV.create()
+        vec.append("Storage")
+        vec.append("Tower")
+        vec.append("Json")
+        point.x := 50.0
+        point.y := 60.0
+        vec := t.put( point, vec)
+
+        new(it)
+        it.i := 33
+        t.forEach(it)
+        
+        println("Done Test5")
+    end Test5
+    <* end *>
+    
     proc RunAll()
     begin
        H.run("DeltaBlue", 12000, 1 )
@@ -97,6 +190,7 @@ import
        H.run("Richards", 1, 1)
        H.run("Json", 1, 1)
        H.run("Havlak", 1, 1 )
+       H.run("CD", 1, 2)
        H.run("Bounce", 1, 1)
        H.run("List", 1, 1)
        H.run("Mandelbrot", 1, 1)
@@ -109,8 +203,8 @@ import
     end RunEachOnce
 
 begin
-   RunAll()
-   //RunEachOnce()
+   //RunAll()
+   RunEachOnce()
    // all work besides Json
 
 end Tester

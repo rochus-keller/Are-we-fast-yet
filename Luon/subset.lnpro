@@ -2,9 +2,9 @@
 BuildDir=
 BuiltInOakwood=true
 BuiltInObSysInner=false
-MainModule=@ByteArray()
+MainModule=@ByteArray(Tester)
 MainProc=@ByteArray()
-Options=@ByteArray()
+Options=@ByteArray(NoJson)
 Suffixes=@Invalid()
 WorkingDir=
 
@@ -43,10 +43,10 @@ size=8
 13\RelPath=NBody.luon
 14\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Luon/Richards.luon
 14\RelPath=Richards.luon
-15\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Luon/CD.luon
-15\RelPath=CD.luon
-16\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Luon/DeltaBlue.luon
-16\RelPath=DeltaBlue.luon
+15\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Luon/DeltaBlue.luon
+15\RelPath=DeltaBlue.luon
+16\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Luon/CD.luon
+16\RelPath=CD.luon
 17\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Luon/Havlak.luon
 17\RelPath=Havlak.luon
 18\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Luon/Json.luon
