@@ -25,10 +25,10 @@ module Run
     import B := Benchmark, Out, Input 
                 <* if not NoMicro then *>
                 ,Permute, List, Mandelbrot, Queens, Sieve, 
-                Towers, Bounce, Storage, NBody,
+                Towers, Bounce, Storage, NBody
                 <* end *>
                 <* if not NoRichards then *>
-                Richards
+                ,Richards
                 <* end *>
                 <* if not NoCD then *>
                 , CD

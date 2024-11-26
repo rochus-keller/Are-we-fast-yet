@@ -267,6 +267,8 @@ module DeltaBlue
     /////////////////// Variable ///////////////////////
     import
         ACV := som.Vector(AbstractConstraint)
+        IAC := som.Interfaces(AbstractConstraint)
+
     type
         Variable = record 
                         value: integer
@@ -518,9 +520,6 @@ module DeltaBlue
     end
     editC.destroyConstraint(this)
   end change
-
-  import
-      IAC := som.Interfaces(AbstractConstraint)
       
   proc (this: Planner) constraintsConsuming(v: Variable; var fn: IAC.ForEachInterface)
       var determiningC, c: AbstractConstraint

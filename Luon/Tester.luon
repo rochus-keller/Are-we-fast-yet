@@ -203,8 +203,7 @@ import
     end RunEachOnce
 
 begin
-   //RunAll()
-   RunEachOnce()
-   // all work besides Json
+   RunAll()
+   //RunEachOnce()
 
 end Tester
