@@ -77,9 +77,6 @@ end runOnce
 
 begin
     //runAll()
-    //runOnce()
-    //run("Bounce", 1, 1);
-    //run("Mandelbrot", 1, 1);
-    run("Permute", 1, 1);
+    runOnce()
 
 end Main

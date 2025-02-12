@@ -21,9 +21,10 @@
  * THE SOFTWARE.
  *)
  
- module Run
+module Run
 
-import B := Benchmark, Input, Out, Bounce, Mandelbrot, Permute, List
+import B := Benchmark, Input, Out, 
+			Bounce, Mandelbrot, Permute, List, Queens, Sieve, Storage, Towers
 
 type 
 	Run* = record
@@ -42,8 +43,6 @@ begin
         return Permute.create()
     elsif name = "List" then
         return List.create()
-    end
-(*
     elsif name = "Queens" then
         return Queens.create()
     elsif name = "Sieve" then
@@ -52,6 +51,8 @@ begin
         return Storage.create()
     elsif name = "Towers" then
         return Towers.create()
+    end
+(*
     elsif name = "Richards" then
         return Richards.create()
     elsif name = "Json" then

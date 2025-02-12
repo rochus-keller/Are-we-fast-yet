@@ -1,0 +1,133 @@
+(* This code is derived from the SOM benchmarks, see AUTHORS.md file.
+ *
+ * Copyright (c) 2025 Rochus Keller <me@rochus-keller.ch> (for Micron migration)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the 'Software'), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *)
+ 
+module Queens
+
+import B := Benchmark
+
+type
+  BoolArray = pointer to array of boolean
+  IntArray = pointer to array of integer
+ 
+  Queens = record
+    base: B.Benchmark
+    freeMaxs: BoolArray
+    freeRows: BoolArray
+    freeMins: BoolArray
+    queenRows: IntArray
+  end
+
+procedure getRowColumn(me: ^Queens; r, c: integer): boolean
+begin
+  return me.freeRows[r] and me.freeMaxs[c + r] and me.freeMins[c - r + 7]
+end getRowColumn
+
+procedure setRowColumn(me: ^Queens; r, c: integer; v: boolean)
+begin
+  me.freeRows[r] := v
+  me.freeMaxs[c + r] := v
+  me.freeMins[c - r + 7] := v
+end setRowColumn
+
+procedure placeQueen(me: ^Queens; c: integer): boolean
+var
+  r: integer
+begin
+  for r := 0 to 7 do
+    if getRowColumn(me, r, c) then
+      me.queenRows[r] := c;
+      setRowColumn(me, r, c, false);
+      if c = 7 then
+       	return true
+      end;
+      if placeQueen(me, c + 1) then
+        return true
+      end;
+      setRowColumn(me, r, c, true)
+    end
+  end
+  return false
+end placeQueen
+
+procedure queens(me: ^Queens): boolean
+var
+  i: integer
+  res: boolean
+begin
+  // Allocate memory for the freeRows, freeMaxs, freeMins, and queenRows arrays.
+  new(me.freeRows, 8)
+  new(me.freeMaxs, 16)
+  new(me.freeMins, 16)
+  new(me.queenRows, 8)
+  
+  for i := 0 to 7 do
+    me.freeRows[i] := true
+    me.queenRows[i] := -1
+  end
+
+  for i := 0 to 15 do
+    me.freeMaxs[i] := true
+    me.freeMins[i] := true
+  end
+  
+  res := placeQueen(me, 0)
+  
+  dispose(me.freeRows)
+  dispose(me.freeMaxs)
+  dispose(me.freeMins);
+  dispose(me.queenRows)
+  
+  return res
+end queens
+
+procedure benchmark(me: ^B.Benchmark): integer
+var
+  i: integer
+  resultBool: boolean
+begin
+  resultBool := true
+  for i := 0 to 9 do
+    resultBool := resultBool and queens(me(Queens))
+  end;
+  if resultBool then return 1 else return 0 end
+end benchmark
+
+procedure verifyResult(me: ^B.Benchmark; result: integer): boolean;
+begin
+  return (result # 0)
+end verifyResult
+
+procedure create*(): ^Queens
+var
+  q: ^Queens;
+begin
+  new(q)
+  q.base.benchmark := benchmark
+  q.base.verifyResult := verifyResult
+  q.base.dispose := nil
+  q.base.innerBenchmarkLoop := nil
+  return q
+end create
+
+end Queens
+

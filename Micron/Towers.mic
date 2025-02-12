@@ -1,0 +1,160 @@
+(* This code is derived from the SOM benchmarks, see AUTHORS.md file.
+ *
+ * Copyright (c) 2025 Rochus Keller <me@rochus-keller.ch> (for Micron migration)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the 'Software'), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *)
+
+module Towers
+
+import B := Benchmark
+
+const
+	PilesCount = 3
+	
+type
+	TowersDisk = record
+		size: integer
+		next: ^TowersDisk
+	end
+	
+	Towers = record
+    	base: B.Benchmark
+    	piles: array PilesCount of ^TowersDisk
+    	movesDone : integer
+    end
+
+procedure TowersDisk_dispose(me: ^TowersDisk)
+begin
+    if me.next then
+        TowersDisk_dispose(me.next)
+    end
+    dispose(me)
+end TowersDisk_dispose
+
+procedure TowersDisk_create(size: integer): ^TowersDisk
+var d: ^TowersDisk
+begin
+    new(d)
+    d.next := nil
+    d.size := size
+    return d
+end TowersDisk_create
+
+procedure TowersDisk_getSize(me: ^TowersDisk): integer
+begin
+	return me.size
+end TowersDisk_getSize
+
+procedure TowersDisk_getNext(me: ^TowersDisk): ^TowersDisk
+begin
+	return me.next
+end TowersDisk_getNext
+
+procedure TowersDisk_setNext(me, value: ^TowersDisk) 
+begin
+	me.next := value
+end TowersDisk_setNext
+
+
+procedure pushDisk(me: ^Towers; disk: ^TowersDisk; pile: integer)
+var top: ^TowersDisk
+begin
+    top := me.piles[pile]
+    if (top # nil) and (TowersDisk_getSize(disk) >= TowersDisk_getSize(top)) then
+    	assert(false) // "Cannot put a big disk on a smaller one"
+    end
+    TowersDisk_setNext(disk,top)
+    me.piles[pile] := disk
+end pushDisk
+
+procedure popDiskFrom(me: ^Towers; pile: integer): ^TowersDisk
+var top: ^TowersDisk
+begin
+    top := me.piles[pile]
+    if top = nil then
+        assert(false) // "Attempting to remove a disk from an empty pile"
+    end
+    me.piles[pile] := TowersDisk_getNext(top)
+    TowersDisk_setNext(top,nil)
+    return top
+end popDiskFrom
+
+procedure moveTopDisk(me: ^Towers; fromPile, toPile: integer)
+begin
+    pushDisk(me,popDiskFrom(me,fromPile), toPile)
+    inc(me.movesDone)
+end moveTopDisk
+
+procedure buildTowerAt(me: ^Towers; pile, disks: integer)
+var i: integer
+begin
+    for i := disks to 0 by -1 do
+        pushDisk(me, TowersDisk_create(i), pile)
+    end
+end buildTowerAt
+
+procedure moveDisks(me: ^Towers; disks, fromPile, toPile: integer)
+var otherPile: integer
+begin
+    if disks = 1 then
+        moveTopDisk(me, fromPile, toPile)
+    else
+        otherPile := (3 - fromPile) - toPile
+        moveDisks(me, disks - 1, fromPile, otherPile)
+        moveTopDisk(me, fromPile, toPile)
+        moveDisks(me, disks - 1, otherPile, toPile)
+    end
+end moveDisks
+
+procedure benchmark(b: ^B.Benchmark): integer
+var i: integer; me: ^Towers
+begin
+	me := b(Towers)
+    for i := 0 to PilesCount-1 do
+        me.piles[i] := nil
+    end
+    buildTowerAt(me, 0, 13)
+    me.movesDone := 0
+    moveDisks(me, 13, 0, 1)
+    for i := 0 to PilesCount-1 do
+        if me.piles[i] then
+            TowersDisk_dispose(me.piles[i])
+        end
+    end
+    return me.movesDone
+end benchmark
+
+procedure verifyResult(me: ^B.Benchmark; result: integer): boolean
+begin
+    return 8191 = result
+end verifyResult
+
+procedure create*(): ^B.Benchmark
+var t: ^Towers
+begin
+    new(t)
+    t.base.benchmark := benchmark
+    t.base.verifyResult := verifyResult
+    t.base.dispose := nil
+    t.base.innerBenchmarkLoop := nil
+    return t
+end create
+
+end Towers
