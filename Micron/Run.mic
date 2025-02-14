@@ -25,6 +25,7 @@ module Run
 
 import B := Benchmark, Input, Out, 
 			Bounce, Mandelbrot, Permute, List, Queens, Sieve, Storage, Towers
+			NBody, Richards
 
 type 
 	Run* = record
@@ -51,14 +52,14 @@ begin
         return Storage.create()
     elsif name = "Towers" then
         return Towers.create()
-    end
-(*
-    elsif name = "Richards" then
-        return Richards.create()
-    elsif name = "Json" then
-        return Json.create()
     elsif name = "NBody" then
         return NBody.create()
+    elsif name = "Richards" then
+        return Richards.create()
+    end
+(*
+    elsif name = "Json" then
+        return Json.create()
     elsif name = "CD2" then
         return CD2.create()
     elsif name = "CD" then
