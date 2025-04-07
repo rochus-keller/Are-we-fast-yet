@@ -32,9 +32,11 @@ type
   	end
 
 	TreeArray = record
-	  arr: pointer to array of TreeArray
+	  arr: pointer to TreeArrayArray
 	  len: uint32
 	end
+	
+	TreeArrayArray = array of TreeArray
 
 procedure freeTree(ta: ^TreeArray)
 var i: integer; t: TreeArray

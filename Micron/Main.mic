@@ -77,7 +77,7 @@ end runOnce
 
 begin
     //runAll()
-    //runOnce()
-    run("Richards", 1, 1);
+    runOnce()
+    //run("Towers", 1, 1);
 
 end Main
