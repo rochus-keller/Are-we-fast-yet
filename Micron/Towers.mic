@@ -42,7 +42,7 @@ type
 
 procedure TowersDisk_dispose(me: ^TowersDisk)
 begin
-    if me.next then
+    if me.next # nil then
         TowersDisk_dispose(me.next)
     end
     dispose(me)
@@ -134,7 +134,7 @@ begin
     me.movesDone := 0
     moveDisks(me, 13, 0, 1)
     for i := 0 to PilesCount-1 do
-        if me.piles[i] then
+        if me.piles[i] # nil then
             TowersDisk_dispose(me.piles[i])
         end
     end

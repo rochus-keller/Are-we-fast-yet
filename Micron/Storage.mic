@@ -45,7 +45,7 @@ begin
     	t := ta.arr[i]
         freeTree(@t)
     end
-    if ta.arr # nil then dispose(ta.arr) end // TODO: why not support dispose(nil)?
+    if ta.arr # nil then dispose(ta.arr) end 
     ta.len := 0
     ta.arr := nil
 end freeTree
@@ -57,6 +57,10 @@ begin
     if depth = 1 then
         res.len := R.next() mod 10 + 1
         new(res.arr, res.len)
+        for i := 0 to res.len-1 do
+            res.arr[i].len := 0
+            res.arr[i].arr := nil
+        end
         return res
     else
         res.len := 4

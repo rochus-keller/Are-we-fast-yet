@@ -78,6 +78,5 @@ end runOnce
 begin
     //runAll()
     runOnce()
-    //run("Towers", 1, 1);
 
 end Main

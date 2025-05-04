@@ -217,7 +217,7 @@ begin
     if me = nil then
         return
     end
-    if me.storage then
+    if me.storage # nil then
         dispose(me.storage)
     end
     dispose(me)

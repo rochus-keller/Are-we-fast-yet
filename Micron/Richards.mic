@@ -863,4 +863,10 @@ begin
     return bench
 end create
 
+begin
+	TRACING := false
+	NO_WORK := nil
+	NO_TASK := nil
+	toDelete := nil
+
 end Richards
