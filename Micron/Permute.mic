@@ -21,7 +21,7 @@
  * THE SOFTWARE.
  *)
  
- module Permute
+module Permute
  
 import B := Benchmark
 

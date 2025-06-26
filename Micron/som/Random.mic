@@ -34,7 +34,7 @@ begin
     seed := init
 end reset
 
-proc next():u32
+proc next*():u32
 begin
     seed := bitand(((seed * 1_309_u32) + 13_849_u32), 65_535_u32)
     return seed
