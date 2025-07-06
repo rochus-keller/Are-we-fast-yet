@@ -31,6 +31,7 @@ MODULE Queens;
 IMPORT Benchmark, SOM, Out;
 
 TYPE
+  INT32  = SOM.INT32;
   (* Publicly exported record type for the Queens benchmark.
      It inherits from the base Benchmark type and holds the state
      of the chessboard as arrays. *)
@@ -39,7 +40,7 @@ TYPE
     freeRows:  POINTER TO ARRAY OF BOOLEAN;
     freeMaxs:  POINTER TO ARRAY OF BOOLEAN;
     freeMins:  POINTER TO ARRAY OF BOOLEAN;
-    queenRows: POINTER TO ARRAY OF INTEGER;
+    queenRows: POINTER TO ARRAY OF INT32;
   END;
 
   (* A helper record to wrap a BOOLEAN result so it can be returned
@@ -50,14 +51,14 @@ TYPE
   END;
 
 (* Checks if a given position (row, column) is free. *)
-PROCEDURE GetRowColumn(q: Queens; r, c: INTEGER): BOOLEAN;
+PROCEDURE GetRowColumn(q: Queens; r, c: INT32): BOOLEAN;
 BEGIN
   RETURN q.freeRows[r] & q.freeMaxs[c + r] & q.freeMins[c - r + 7];
 END GetRowColumn;
 
 (* Marks a given position (row, column) and its diagonals as either
    occupied or free. *)
-PROCEDURE SetRowColumn(q: Queens; r, c: INTEGER; v: BOOLEAN);
+PROCEDURE SetRowColumn(q: Queens; r, c: INT32; v: BOOLEAN);
 BEGIN
   q.freeRows[r]         := v;
   q.freeMaxs[c + r]     := v;
@@ -65,8 +66,8 @@ BEGIN
 END SetRowColumn;
 
 (* The core recursive backtracking algorithm to place queens. *)
-PROCEDURE PlaceQueen(q: Queens; c: INTEGER): BOOLEAN;
-  VAR r: INTEGER;
+PROCEDURE PlaceQueen(q: Queens; c: INT32): BOOLEAN;
+  VAR r: INT32;
 BEGIN
   FOR r := 0 TO 7 DO
     IF GetRowColumn(q, r, c) THEN
@@ -90,7 +91,7 @@ END PlaceQueen;
 
 (* Sets up the board and initiates the solving process for one run. *)
 PROCEDURE RunQueens(q: Queens): BOOLEAN;
-VAR i: INTEGER;
+VAR i: INT32;
 BEGIN
   NEW(q.freeRows, 8);
   NEW(q.freeMaxs, 16);
@@ -113,7 +114,7 @@ PROCEDURE DoBenchmark(b: Benchmark.Benchmark): SOM.Object;
   VAR
     q: Queens;
     result: BOOLEAN;
-    i: INTEGER;
+    i: INT32;
     resultObj: BooleanObject;
 BEGIN
   q := b(Queens); (* Type cast from base Benchmark to our specific Queens type *)

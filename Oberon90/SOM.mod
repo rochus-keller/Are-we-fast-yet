@@ -31,6 +31,9 @@ CONST
   INITIAL_CAPACITY*    = 16;
 
 TYPE
+  INT32* = LONGINT;
+  F64* = LONGREAL;
+
   (* The base type for all objects in the benchmark suite. *)
   Object* = POINTER TO ObjectDesc;
   ObjectDesc* = RECORD END;
@@ -50,7 +53,7 @@ TYPE
   (* --- Record types defining the structure of collections --- *)
   VectorDesc* = RECORD (ObjectDesc)
     storage: POINTER TO ARRAY OF Object;
-    firstIdx, lastIdx: INTEGER;
+    firstIdx, lastIdx: INT32;
   END;
 
   SetDesc* = RECORD (ObjectDesc)
@@ -72,17 +75,17 @@ TYPE
   
   Entry = POINTER TO EntryDesc;
   EntryDesc = RECORD (ObjectDesc)
-    hash: INTEGER;
+    hash: INT32;
     key, value: Object;
     next: Entry;
   END;
 
   (* A generic hash function. *)
-  HashProc = PROCEDURE (obj: Object): INTEGER;
+  HashProc = PROCEDURE (obj: Object): INT32;
 
   DictionaryDesc = RECORD (ObjectDesc)
     buckets: POINTER TO ARRAY OF Entry;
-    size: INTEGER;
+    size: INT32;
     hashFunc: HashProc;
   END;
 
@@ -94,11 +97,11 @@ BEGIN
   RETURN a = b;
 END ObjectsEqual;
 
-PROCEDURE DefaultHash*(obj: Object): INTEGER;
-  VAR h: INTEGER;
+PROCEDURE DefaultHash*(obj: Object): INT32;
+  VAR h: INT32;
 BEGIN
-  h := SYSTEM.VAL(INTEGER, obj); (* Address as hash *)
-  RETURN SYSTEM.VAL(INTEGER, SYSTEM.VAL(SET, h) / SYSTEM.VAL(SET, SYSTEM.LSH(h, -16))); (* h XOR (h >>> 16) *)
+  h := SYSTEM.VAL(INT32, obj); (* Address as hash *)
+  RETURN SYSTEM.VAL(INT32, SYSTEM.VAL(SET, h) / SYSTEM.VAL(SET, SYSTEM.LSH(h, -16))); (* h XOR (h >>> 16) *)
 END DefaultHash;
 
 (* --- Private Helper Procedures for Iteration --- *)
@@ -118,10 +121,10 @@ END SetContainsCheck;
 
 (* --- Vector Procedures --- *)
 
-PROCEDURE EnlargeVector(v: Vector; minSize: INTEGER);
-  VAR newLength: INTEGER;
+PROCEDURE EnlargeVector(v: Vector; minSize: INT32);
+  VAR newLength: INT32;
       newStorage: POINTER TO ARRAY OF Object;
-      i: INTEGER;
+      i: INT32;
 BEGIN
   newLength := LEN(v.storage^);
   IF newLength = 0 THEN newLength := 1 END;
@@ -135,8 +138,8 @@ BEGIN
   v.storage := newStorage;
 END EnlargeVector;
 
-PROCEDURE CreateVector*(initialSize: INTEGER): Vector;
-  VAR v: Vector; size: INTEGER;
+PROCEDURE CreateVector*(initialSize: INT32): Vector;
+  VAR v: Vector; size: INT32;
 BEGIN
   NEW(v);
   IF initialSize = 0 THEN size := INITIAL_VECTOR_SIZE ELSE size := initialSize END;
@@ -145,13 +148,13 @@ BEGIN
   RETURN v;
 END CreateVector;
 
-PROCEDURE VectorAt*(v: Vector; idx: INTEGER): Object;
+PROCEDURE VectorAt*(v: Vector; idx: INT32): Object;
 BEGIN
   IF (idx >= v.firstIdx) & (idx < v.lastIdx) THEN RETURN v.storage[idx] END;
   RETURN NIL;
 END VectorAt;
 
-PROCEDURE VectorAtPut*(v: Vector; idx: INTEGER; val: Object);
+PROCEDURE VectorAtPut*(v: Vector; idx: INT32; val: Object);
 BEGIN
   IF idx >= LEN(v.storage^) THEN
     EnlargeVector(v, idx);
@@ -163,7 +166,7 @@ BEGIN
 END VectorAtPut;
 
 PROCEDURE VectorAppend*(v: Vector; elem: Object);
-  VAR newStorage: POINTER TO ARRAY OF Object; i: INTEGER;
+  VAR newStorage: POINTER TO ARRAY OF Object; i: INT32;
 BEGIN
   IF v.lastIdx >= LEN(v.storage^) THEN
     NEW(newStorage, LEN(v.storage^) * 2);
@@ -179,13 +182,13 @@ BEGIN
   RETURN v.lastIdx = v.firstIdx;
 END VectorIsEmpty;
 
-PROCEDURE VectorSize*(v: Vector): INTEGER;
+PROCEDURE VectorSize*(v: Vector): INT32;
 BEGIN
   RETURN v.lastIdx - v.firstIdx;
 END VectorSize;
 
 PROCEDURE VectorForEach*(v: Vector; p: ValueIterator; data: Context);
-  VAR i: INTEGER;
+  VAR i: INT32;
 BEGIN
   FOR i := v.firstIdx TO v.lastIdx - 1 DO
     p(v.storage[i], data);
@@ -193,7 +196,7 @@ BEGIN
 END VectorForEach;
 
 PROCEDURE VectorHasSome*(v: Vector; p: TestIterator; data: Context): BOOLEAN;
-  VAR i: INTEGER;
+  VAR i: INT32;
 BEGIN
   FOR i := v.firstIdx TO v.lastIdx - 1 DO
     IF p(v.storage[i], data) THEN RETURN TRUE END;
@@ -204,7 +207,7 @@ END VectorHasSome;
 PROCEDURE VectorRemove*(v: Vector; obj: Object): BOOLEAN;
   VAR
     newStorage: POINTER TO ARRAY OF Object;
-    newLast, i, j: INTEGER;
+    newLast, i, j: INT32;
     found: BOOLEAN;
 BEGIN
   found := FALSE;
@@ -231,7 +234,7 @@ END VectorRemove;
 
 (* --- Set Procedures --- *)
 
-PROCEDURE CreateSet*(initialSize: INTEGER): Set;
+PROCEDURE CreateSet*(initialSize: INT32): Set;
   VAR s: Set;
 BEGIN
   NEW(s);
@@ -239,7 +242,7 @@ BEGIN
   RETURN s;
 END CreateSet;
 
-PROCEDURE SetSize*(s: Set): INTEGER;
+PROCEDURE SetSize*(s: Set): INT32;
 BEGIN
   RETURN VectorSize(s.items);
 END SetSize;

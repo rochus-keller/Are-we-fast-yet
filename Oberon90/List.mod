@@ -32,9 +32,10 @@ processing linked lists.
 IMPORT Benchmark, SOM, Out;
 
 TYPE
+  INT32 = SOM.INT32;
   Element = POINTER TO ElementDesc;
   ElementDesc* = RECORD (SOM.ObjectDesc)
-                  val: INTEGER;
+                  val: INT32;
                   next: Element;
                   END;
   
@@ -44,13 +45,13 @@ TYPE
   (* Helper record to wrap the integer result into a SOM.Object. *)
   IntegerObject = POINTER TO IntegerObjectDesc;
   IntegerObjectDesc = RECORD (SOM.ObjectDesc)
-                      value: INTEGER;
+                      value: INT32;
                       END;
 
 (* --- Private Helper Procedures (Not Exported) --- *)
 
 (* Recursively calculates the length of a list. *)
-PROCEDURE ElementLength(e: Element): INTEGER;
+PROCEDURE ElementLength(e: Element): INT32;
 BEGIN
   IF e.next = NIL THEN
     RETURN 1;
@@ -60,7 +61,7 @@ BEGIN
 END ElementLength;
 
 (* Recursively creates a linked list of a given length. *)
-PROCEDURE MakeList(length: INTEGER): Element;
+PROCEDURE MakeList(length: INT32): Element;
 VAR e: Element;
 BEGIN
   IF length = 0 THEN

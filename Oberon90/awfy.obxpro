@@ -2,7 +2,7 @@
 BuildDir=
 BuiltInOakwood=true
 BuiltInObSysInner=false
-IntegerIsInt16=false
+IntegerIsInt16=true
 MainModule=@ByteArray()
 MainProc=@ByteArray()
 Options=@ByteArray()

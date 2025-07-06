@@ -32,26 +32,27 @@
 IMPORT Benchmark, SOM, Random, Out;
 
 TYPE
+  INT32  = SOM.INT32;
   (* Publicly exported record type for the Storage benchmark. *)
   Storage* = POINTER TO StorageDesc;
   StorageDesc* = RECORD (Benchmark.BenchmarkDesc)
-    count: INTEGER;
+    count: INT32;
   END;
 
   (* Helper record to wrap the integer result into a SOM.Object. *)
   IntegerObject = POINTER TO IntegerObjectDesc;
   IntegerObjectDesc = RECORD (SOM.ObjectDesc)
-    value: INTEGER;
+    value: INT32;
   END;
 
 (* --- Private Helper Procedures (Not Exported) --- *)
 
 (* The core recursive function to build the tree structure.
    This is a private implementation detail of the benchmark. *)
-PROCEDURE BuildTreeDepth(s: Storage; depth: INTEGER; random: Random.Random): SOM.Object;
+PROCEDURE BuildTreeDepth(s: Storage; depth: INT32; random: Random.Random): SOM.Object;
   VAR
     vec: SOM.Vector;
-    i: INTEGER;
+    i: INT32;
 BEGIN
   INC(s.count);
   IF depth = 1 THEN

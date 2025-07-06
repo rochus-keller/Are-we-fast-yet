@@ -34,24 +34,25 @@ CONST
   VectorSize = 6;
 
 TYPE
+  INT32  = SOM.INT32;
   (* Publicly exported record type for the Permute benchmark.
      It inherits from the base Benchmark type and holds the state
      for the permutation algorithm. *)
   Permute* = POINTER TO PermuteDesc;
   PermuteDesc* = RECORD (Benchmark.BenchmarkDesc)
-    count: INTEGER;
-    v: POINTER TO ARRAY OF INTEGER;
+    count: INT32;
+    v: POINTER TO ARRAY OF INT32;
   END;
 
   (* Helper record to wrap the integer result into a SOM.Object. *)
   IntegerObject = POINTER TO IntegerObjectDesc;
   IntegerObjectDesc = RECORD (SOM.ObjectDesc)
-    value: INTEGER;
+    value: INT32;
   END;
 
 (* Swaps two elements in the benchmark's vector. *)
-PROCEDURE Swap(p: Permute; i, j: INTEGER);
-  VAR tmp: INTEGER;
+PROCEDURE Swap(p: Permute; i, j: INT32);
+  VAR tmp: INT32;
 BEGIN
   tmp := p.v[i];
   p.v[i] := p.v[j];
@@ -60,8 +61,8 @@ END Swap;
 
 (* The core recursive permutation algorithm.
    This is a private implementation detail. *)
-PROCEDURE PermuteRec(p: Permute; n: INTEGER);
-  VAR i: INTEGER;
+PROCEDURE PermuteRec(p: Permute; n: INT32);
+  VAR i: INT32;
 BEGIN
   INC(p.count);
   IF n # 0 THEN

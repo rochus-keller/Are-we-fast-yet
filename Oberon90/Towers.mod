@@ -25,22 +25,23 @@ MODULE Towers;
 IMPORT Benchmark, SOM, Out;
 
 TYPE
+  INT32  = SOM.INT32;
   TowersDisk = POINTER TO TowersDiskDesc;
   TowersDiskDesc = RECORD (SOM.ObjectDesc)
-    size: INTEGER;
+    size: INT32;
     next: TowersDisk;
   END;
 
   TowersDesc = RECORD (Benchmark.BenchmarkDesc)
     piles: SOM.Vector;
-    movesDone: INTEGER;
+    movesDone: INT32;
   END;
   
   Towers = POINTER TO TowersDesc;
   
-  Result = POINTER TO RECORD (SOM.Object) res: INTEGER END;
+  Result = POINTER TO RECORD (SOM.Object) res: INT32 END;
 
-PROCEDURE CreateTowersDisk(size: INTEGER): TowersDisk;
+PROCEDURE CreateTowersDisk(size: INT32): TowersDisk;
   VAR disk: TowersDisk;
 BEGIN
   NEW(disk);
@@ -49,7 +50,7 @@ BEGIN
   RETURN disk;
 END CreateTowersDisk;
 
-PROCEDURE PushDisk(b: Towers; disk: TowersDisk; pile: INTEGER);
+PROCEDURE PushDisk(b: Towers; disk: TowersDisk; pile: INT32);
   VAR top: SOM.Object;
 BEGIN
   top := SOM.VectorAt(b.piles, pile);
@@ -62,7 +63,7 @@ BEGIN
   SOM.VectorAtPut(b.piles, pile, disk);
 END PushDisk;
 
-PROCEDURE PopDiskFrom(b: Towers; pile: INTEGER): TowersDisk;
+PROCEDURE PopDiskFrom(b: Towers; pile: INT32): TowersDisk;
   VAR top: SOM.Object; topDisk: TowersDisk;
 BEGIN
   top := SOM.VectorAt(b.piles, pile);
@@ -73,14 +74,14 @@ BEGIN
   RETURN topDisk;
 END PopDiskFrom;
 
-PROCEDURE MoveTopDisk(b: Towers; from, to: INTEGER);
+PROCEDURE MoveTopDisk(b: Towers; from, to: INT32);
 BEGIN
   PushDisk(b, PopDiskFrom(b, from), to);
   INC(b.movesDone);
 END MoveTopDisk;
 
-PROCEDURE BuildTowerAt(b: Towers; pile, disks: INTEGER);
-  VAR i: INTEGER;
+PROCEDURE BuildTowerAt(b: Towers; pile, disks: INT32);
+  VAR i: INT32;
 BEGIN
   i := disks;
   WHILE i >= 0 DO
@@ -89,8 +90,8 @@ BEGIN
   END;
 END BuildTowerAt;
 
-PROCEDURE MoveDisks(b: Towers; disks, from, to: INTEGER);
-  VAR other: INTEGER;
+PROCEDURE MoveDisks(b: Towers; disks, from, to: INT32);
+  VAR other: INT32;
 BEGIN
   IF disks = 1 THEN
     MoveTopDisk(b, from, to);
@@ -116,7 +117,7 @@ BEGIN
 END DoBenchmark;
 
 PROCEDURE VerifyResult*(b: Benchmark.Benchmark; result: SOM.Object): BOOLEAN;
-  VAR val: INTEGER;
+  VAR val: INT32;
 BEGIN
   val := result(Result).res;
   RETURN val = 8191;

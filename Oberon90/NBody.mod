@@ -21,8 +21,8 @@ CONST
   DAYS_PER_YEAR* = 365.24;
 
 TYPE
-  REAL64 = LONGREAL; 
-  INT32  = INTEGER;
+  REAL64 = SOM.F64; 
+  INT32  = SOM.INT32;
 
   (* Record for a single celestial body. *)
   Body = POINTER TO BodyDesc;
@@ -184,7 +184,7 @@ BEGIN
 END Energy;
 
 (* A custom inner loop for this benchmark. *)
-PROCEDURE NBodyInnerBenchmarkLoop*(b: Benchmark.Benchmark; innerIterations: INT32): BOOLEAN;
+PROCEDURE NBodyInnerBenchmarkLoop*(b: Benchmark.Benchmark; innerIterations: INTEGER): BOOLEAN;
   VAR
     system: NBodySystem;
     i: INT32;
@@ -216,7 +216,7 @@ BEGIN
     ELSIF innerIterations = 1 THEN RETURN ABS(val - (-0.16907495402506745)) < 1.0E-14
     ELSE
       Out.String("No verification result for "); Out.Int(innerIterations, 0); Out.String(" found"); Out.Ln;
-      Out.String("Result is: "); Out.Real(val, 20); Out.Ln;
+      Out.String("Result is: "); Out.LongReal(val, 20); Out.Ln;
       RETURN FALSE;
     END;
   ELSE

@@ -26,6 +26,7 @@ MODULE Benchmark;
 IMPORT SOM, Out;
 
 TYPE
+  INT32* = SOM.INT32;
   Benchmark* = POINTER TO BenchmarkDesc;
   BenchmarkDesc* = RECORD (SOM.ObjectDesc) 
                       InnerBenchmarkLoop*: PROCEDURE(b: Benchmark; innerIterations: INTEGER): BOOLEAN;

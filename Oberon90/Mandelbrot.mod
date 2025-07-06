@@ -56,6 +56,8 @@ MODULE Mandelbrot;
 IMPORT Benchmark, SOM, SYSTEM, Out;
 
 TYPE
+  INT32 = SOM.INT32;
+  F64 = SOM.F64;
   Mandelbrot* = POINTER TO MandelbrotDesc;
   MandelbrotDesc* = RECORD (Benchmark.BenchmarkDesc)
   END;
@@ -63,19 +65,19 @@ TYPE
   (* Helper record to wrap the integer result into a SOM.Object. *)
   IntegerObject = POINTER TO IntegerObjectDesc;
   IntegerObjectDesc = RECORD (SOM.ObjectDesc)
-    value: INTEGER;
+    value: INT32;
   END;
 
 (* --- Private Helper Procedures (Not Exported) --- *)
 
-PROCEDURE DoMandelbrot(size: INTEGER): INTEGER;
+PROCEDURE DoMandelbrot(size: INT32): INT32;
   VAR
-    sum, byteAcc, bitNum: INTEGER;
-    y, x, z: INTEGER;
-    ci, cr: REAL;
-    zr, zi, zrzr, zizi: REAL;
+    sum, byteAcc, bitNum: INT32;
+    y, x, z: INT32;
+    ci, cr: INT32;
+    zr, zi, zrzr, zizi: F64;
     notDone: BOOLEAN;
-    escape: INTEGER;
+    escape: INT32;
 BEGIN
   sum := 0; byteAcc := 0; bitNum := 0;
 
@@ -106,11 +108,11 @@ BEGIN
       byteAcc := SYSTEM.LSH(byteAcc, 1) + escape; (* byte_acc << 1 *)
       INC(bitNum);
       IF bitNum = 8 THEN
-        sum := SYSTEM.VAL(INTEGER, SYSTEM.VAL(SET, sum) / SYSTEM.VAL(SET, byteAcc)); (* sum XOR byte_acc *)
+        sum := SYSTEM.VAL(INT32, SYSTEM.VAL(SET, sum) / SYSTEM.VAL(SET, byteAcc)); (* sum XOR byte_acc *)
         byteAcc := 0; bitNum := 0;
       ELSIF x = size - 1 THEN
         byteAcc := SYSTEM.LSH(byteAcc, 8 - bitNum);
-        sum := SYSTEM.VAL(INTEGER, SYSTEM.VAL(SET, sum) / SYSTEM.VAL(SET, byteAcc)); (* sum XOR byte_acc *)
+        sum := SYSTEM.VAL(INT32, SYSTEM.VAL(SET, sum) / SYSTEM.VAL(SET, byteAcc)); (* sum XOR byte_acc *)
         byteAcc := 0; bitNum := 0;
       END;
 
@@ -125,7 +127,7 @@ END DoMandelbrot;
    as the Mandelbrot verification depends on the iteration count. *)
 PROCEDURE MandelbrotInnerBenchmarkLoop*(b: Benchmark.Benchmark; innerIterations: INTEGER): BOOLEAN;
   VAR
-    mandelbrotResult: INTEGER;
+    mandelbrotResult: INT32;
     resultObj: IntegerObject;
 BEGIN
   mandelbrotResult := DoMandelbrot(innerIterations);
@@ -139,7 +141,7 @@ END MandelbrotInnerBenchmarkLoop;
 
 (* The verification depends on the number of iterations. *)
 PROCEDURE VerifyResult*(b: Benchmark.Benchmark; result: SOM.Object; innerIterations: INTEGER): BOOLEAN;
-  VAR val: INTEGER;
+  VAR val: INT32;
 BEGIN
   WITH result: IntegerObject DO
     val := result.value;

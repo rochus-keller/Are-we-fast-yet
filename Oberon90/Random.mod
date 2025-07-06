@@ -27,13 +27,16 @@ MODULE Random;
   A simple Linear Congruential Generator (LCG) used by benchmarks like Storage.
 *)
 
+IMPORT SOM;
+
 CONST
   InitialSeed = 74755;
 
 TYPE
+  INT32  = SOM.INT32;
   Random* = POINTER TO RandomDesc;
   RandomDesc* = RECORD
-    seed: INTEGER;
+    seed: INT32;
   END;
 
 PROCEDURE Create*(): Random;
@@ -44,7 +47,7 @@ BEGIN
   RETURN r;
 END Create;
 
-PROCEDURE Next*(r: Random): INTEGER;
+PROCEDURE Next*(r: Random): INT32;
 BEGIN
   (* The bitwise AND with 65535 is equivalent to MOD 65536. *)
   r.seed := ((r.seed * 1309) + 13849) MOD 65536;

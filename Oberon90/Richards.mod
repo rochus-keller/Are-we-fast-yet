@@ -31,7 +31,7 @@ CONST
   DATA_SIZE* = 4;
 
 TYPE
-  INT32 = INTEGER;
+  INT32 = SOM.INT32;
 
   (* Forward declarations matching the C structure *)
   RBObject* = POINTER TO RBObjectDesc;

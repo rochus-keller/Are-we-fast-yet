@@ -35,7 +35,7 @@ CONST
   NumIterations = 50;
 
 TYPE
-  INT32 = INTEGER; 
+  INT32 = SOM.INT32; 
 
   (* Private record type for a single Ball. It does not need to be exported.
      It inherits from SOM.Object for consistency, though not strictly required

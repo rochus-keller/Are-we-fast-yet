@@ -26,6 +26,7 @@ MODULE Sieve;
 IMPORT Benchmark, SOM, Out;
 
 TYPE
+  INT32  = SOM.INT32;
   (* Publicly exported record type for the Sieve benchmark.
      It inherits from the base Benchmark type.  *)
   Sieve* = POINTER TO SieveDesc;
@@ -34,16 +35,16 @@ TYPE
   (* Helper record to wrap the integer result, making it a valid SOM.Object. *)
   IntegerObject = POINTER TO IntegerObjectDesc;
   IntegerObjectDesc = RECORD (SOM.ObjectDesc)
-                      value: INTEGER;
+                      value: INT32;
                     END;
 
 (* -------------------- Private Helper Procedures -------------------- *)
 
 (* This is the core sieve algorithm. It is a local procedure *)
-PROCEDURE DoSieve(flags: POINTER TO ARRAY OF BOOLEAN; size: INTEGER): INTEGER;
+PROCEDURE DoSieve(flags: POINTER TO ARRAY OF BOOLEAN; size: INT32): INT32;
   VAR
-    primeCount: INTEGER;
-    i, k: INTEGER;
+    primeCount: INT32;
+    i, k: INT32;
 BEGIN
   primeCount := 0;
   FOR i := 2 TO size -1 DO
@@ -65,8 +66,8 @@ END DoSieve;
 PROCEDURE DoBenchmark*(b: Benchmark.Benchmark): SOM.Object;
   VAR
     flags: POINTER TO ARRAY OF BOOLEAN;
-    resultValue: INTEGER;
-    i: INTEGER;
+    resultValue: INT32;
+    i: INT32;
     resultObj: IntegerObject;
 BEGIN
   NEW(flags, 5000);
