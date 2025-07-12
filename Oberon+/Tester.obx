@@ -236,7 +236,7 @@ import
        H.run("Richards", 100, 1)
        H.run("Json", 100, 1)
        H.run("Havlak", 10, 1 )
-      //H.run("CD2", 250, 2)
+       H.run("CD2", 250, 2)
        H.run("Bounce", 1500, 1)
        H.run("List", 1500, 1)
        H.run("Mandelbrot", 500, 1)
@@ -275,10 +275,8 @@ begin
    // Test5()
    // Test6()
    
-   RunAll()
-   //RunEachOnce()
-
-   //H.run("CD", 250, 2) 
+   //RunAll()
+   RunEachOnce()
 
    println("End Tester")
 end Tester

@@ -36,7 +36,7 @@ module NBody
     begin
         system := createSystem()
         for i := 0 to innerIterations-1 do
-          system.advance(0.01)
+          system.advance(1.0d-2)
        end
       return this.verifyResult2(system.energy(), innerIterations)
     end innerBenchmarkLoop
@@ -45,7 +45,7 @@ module NBody
 	    const epsilon = 0.00000000000000005 // 5e-17
     begin
        if innerIterations = 250000 then
-          return abs(result) - 0.1690859889909308 < epsilon
+         return abs(result) - 0.1690859889909308 < epsilon
        end
        if innerIterations = 1 then
           return abs(result) - 0.16907495402506745 < epsilon
@@ -212,7 +212,7 @@ module NBody
 
       for i := 0 to numberOfBodies-1 do
           iBody := this.bodies[i]
-          e := e + 0.5 * iBody.mass
+          e := e + 5.0d-1 * iBody.mass
               * (iBody.vx * iBody.vx +
                  iBody.vy * iBody.vy +
                  iBody.vz * iBody.vz) 
