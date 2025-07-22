@@ -76,12 +76,13 @@ PROCEDURE DoBenchmark(b: Benchmark.Benchmark): SOM.Object;
     s: Storage;
     random: Random.Random;
     resultObj: IntegerObject;
+    dummy: SOM.Object;
 BEGIN
   s := b(Storage); (* Type cast from base Benchmark to our specific type *)
   random := Random.Create();
 
   s.count := 0;
-  BuildTreeDepth(s, 7, random); (* The returned tree is discarded; we only care about the count *)
+  dummy := BuildTreeDepth(s, 7, random); (* The returned tree is discarded; we only care about the count *)
 
   (* Wrap the final count in an object to return. *)
   NEW(resultObj);
@@ -92,8 +93,8 @@ END DoBenchmark;
 (* procedure to verify the benchmark's result. *)
 PROCEDURE VerifyResult(b: Benchmark.Benchmark; result: SOM.Object): BOOLEAN;
 BEGIN
-  WITH result: IntegerObject DO
-    RETURN result.value = 5461;
+  IF result IS IntegerObject THEN
+    RETURN result(IntegerObject).value = 5461;
   ELSE
     Out.String("Storage verification failed: result is not an IntegerObject."); Out.Ln;
     RETURN FALSE;

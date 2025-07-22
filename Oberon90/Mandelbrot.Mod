@@ -83,12 +83,12 @@ BEGIN
 
   y := 0;
   WHILE y < size DO
-    ci := (2.0 * y / size) - 1.0;
+    ci := ENTIER((2.0 * y / size) - 1.0);
     x := 0;
     WHILE x < size DO
       zr := 0.0; zrzr := 0.0;
       zi := 0.0; zizi := 0.0;
-      cr := (2.0 * x / size) - 1.5;
+      cr := ENTIER((2.0 * x / size) - 1.5);
 
       z := 0; notDone := TRUE; escape := 0;
       WHILE notDone & (z < 50) DO
@@ -123,28 +123,12 @@ BEGIN
   RETURN sum;
 END DoMandelbrot;
 
-(* This is a special implementation of the inner benchmark loop,
-   as the Mandelbrot verification depends on the iteration count. *)
-PROCEDURE MandelbrotInnerBenchmarkLoop*(b: Benchmark.Benchmark; innerIterations: INTEGER): BOOLEAN;
-  VAR
-    mandelbrotResult: INT32;
-    resultObj: IntegerObject;
-BEGIN
-  mandelbrotResult := DoMandelbrot(innerIterations);
-  
-  NEW(resultObj);
-  resultObj.value := mandelbrotResult;
-  
-  (* The verification logic is called directly here. *)
-  RETURN VerifyResult(b, resultObj, innerIterations);
-END MandelbrotInnerBenchmarkLoop;
-
 (* The verification depends on the number of iterations. *)
 PROCEDURE VerifyResult*(b: Benchmark.Benchmark; result: SOM.Object; innerIterations: INTEGER): BOOLEAN;
   VAR val: INT32;
 BEGIN
-  WITH result: IntegerObject DO
-    val := result.value;
+  IF result IS IntegerObject THEN
+    val := result(IntegerObject).value;
     IF innerIterations = 500 THEN RETURN val = 191
     ELSIF innerIterations = 750 THEN RETURN val = 50
     ELSIF innerIterations = 1 THEN RETURN val = 128
@@ -159,6 +143,22 @@ BEGIN
   END;
 END VerifyResult;
 
+(* This is a special implementation of the inner benchmark loop,
+   as the Mandelbrot verification depends on the iteration count. *)
+PROCEDURE InnerBenchmarkLoop*(b: Benchmark.Benchmark; innerIterations: INTEGER): BOOLEAN;
+  VAR
+    mandelbrotResult: INT32;
+    resultObj: IntegerObject;
+BEGIN
+  mandelbrotResult := DoMandelbrot(innerIterations);
+  
+  NEW(resultObj);
+  resultObj.value := mandelbrotResult;
+  
+  (* The verification logic is called directly here. *)
+  RETURN VerifyResult(b, resultObj, innerIterations);
+END InnerBenchmarkLoop;
+
 (* Public factory procedure to create a new Mandelbrot benchmark instance. *)
 PROCEDURE Create*(): Benchmark.Benchmark;
   VAR m: Mandelbrot;
@@ -166,7 +166,7 @@ BEGIN
   NEW(m);
   (* This benchmark has a custom loop, so we assign its specific procedure
      to the 'InnerBenchmarkLoop' field, overriding the default behavior. *)
-  m.InnerBenchmarkLoop := MandelbrotInnerBenchmarkLoop;
+  m.InnerBenchmarkLoop := InnerBenchmarkLoop;
   RETURN m;
 END Create;
 

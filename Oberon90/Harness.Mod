@@ -23,17 +23,36 @@
  
 MODULE Harness;
 
-IMPORT Out, Input, Strings, Benchmark, Towers, Sieve, Queens, Storage, Permute, Mandelbrot
-       List, Bounce, NBody, Richards;
+IMPORT Out, Benchmark, Towers, Sieve, Queens, Storage, Permute, Mandelbrot,
+       List, Bounce, NBody, Richards, Unix, S := SYSTEM;
 
 TYPE
   Run = POINTER TO RunDesc;
   RunDesc = RECORD
     name: ARRAY 32 OF CHAR;
     benchmark: Benchmark.Benchmark;
-    numIterations, innerIterations: INTEGER;
+    numIterations: LONGINT;
+    innerIterations: INTEGER;
     total: LONGINT;
   END;
+
+VAR
+    timeStart: Unix.Timeval;
+    
+PROCEDURE InitTime ();
+ VAR res: LONGINT;
+BEGIN
+ res := Unix.Gettimeofday(S.ADR(timeStart), 0);
+END  InitTime; 
+
+PROCEDURE Time (): LONGINT;
+ VAR now: Unix.Timeval; res, sec, usec: LONGINT;
+BEGIN
+ res := Unix.Gettimeofday(S.ADR(now), 0);
+ sec := now.sec - timeStart.sec;
+ usec := now.usec - timeStart.usec;
+ RETURN sec*1000000 + usec;
+END  Time; 
 
 PROCEDURE SelectBenchmark(name: ARRAY OF CHAR): Benchmark.Benchmark;
 BEGIN
@@ -61,12 +80,12 @@ END SelectBenchmark;
 PROCEDURE Measure(run: Run);
   VAR startTime, endTime, runTime: LONGINT;
 BEGIN
-  startTime := Input.Time();
+  startTime := Time();
   IF ~run.benchmark.InnerBenchmarkLoop(run.benchmark,run.innerIterations) THEN
     Out.String("Benchmark failed with incorrect result."); Out.Ln;
     HALT(101);
   END;
-  endTime := Input.Time();
+  endTime := Time();
   runTime := endTime - startTime;
   
   (* we don't use intermediate results
@@ -77,7 +96,7 @@ BEGIN
 END Measure;
 
 PROCEDURE DoRuns(run: Run);
-  VAR i: INTEGER;
+  VAR i: LONGINT;
 BEGIN
   FOR i := 1 TO run.numIterations DO
     Measure(run);
@@ -108,7 +127,7 @@ BEGIN
 END PrintTotal;
 
 
-PROCEDURE DoRun(what : ARRAY OF CHAR; numIterations, innerIterations: INTEGER);
+PROCEDURE DoRun(what : ARRAY OF CHAR; numIterations: LONGINT; innerIterations: INTEGER);
   VAR run: Run;
 BEGIN
   NEW(run);
@@ -121,16 +140,35 @@ BEGIN
   PrintTotal(run);
 END DoRun;
 
+PROCEDURE TestRun*;
 BEGIN
-  DoRun("Sieve", 1, 1);
-  DoRun("Towers", 1, 1);
-  DoRun("Queens", 1, 1);
-  DoRun("Storage", 1, 1);
-  DoRun("Permute", 1, 1);
-  DoRun("List", 1, 1);
-  DoRun("Bounce", 1, 1);
-  DoRun("Mandelbrot", 1, 1);
-  DoRun("NBody", 1, 1);
-  DoRun("Richards", 1, 1);
+    DoRun("Richards", 1, 1);
+    DoRun("Bounce", 1, 1);
+    DoRun("List", 1, 1);
+    DoRun("Mandelbrot", 1, 1);
+    (*DoRun("NBody", 1, 1);*)
+    DoRun("Permute", 1, 1);
+    DoRun("Queens", 1, 1);
+    DoRun("Sieve", 1, 1);
+    DoRun("Storage", 1, 1);
+    (*DoRun("Towers", 1, 1);*)
+END TestRun;
+
+PROCEDURE FullRun*;
+BEGIN
+    DoRun("Richards", 100, 1);
+    DoRun("Bounce", 1500, 1);
+    DoRun("List", 1500, 1);
+    DoRun("Mandelbrot", 500, 1);
+    (*DoRun("NBody", 250000, 1);*)
+    DoRun("Permute", 1000, 1);
+    DoRun("Queens", 1000, 1);
+    DoRun("Sieve", 3000, 1);
+    DoRun("Storage", 1000, 1);
+    (*DoRun("Towers", 600, 1);*)
+END FullRun;
+
+BEGIN
+    InitTime
 END Harness.
 

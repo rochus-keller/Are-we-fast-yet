@@ -37,11 +37,12 @@ TYPE
   IntegerObjectDesc = RECORD (SOM.ObjectDesc)
                       value: INT32;
                     END;
+  Flags = POINTER TO ARRAY OF BOOLEAN;
 
 (* -------------------- Private Helper Procedures -------------------- *)
 
 (* This is the core sieve algorithm. It is a local procedure *)
-PROCEDURE DoSieve(flags: POINTER TO ARRAY OF BOOLEAN; size: INT32): INT32;
+PROCEDURE DoSieve(flags: Flags; size: INT32): INT32;
   VAR
     primeCount: INT32;
     i, k: INT32;
@@ -65,7 +66,7 @@ END DoSieve;
 (* Public procedure to run the benchmark logic. *)
 PROCEDURE DoBenchmark*(b: Benchmark.Benchmark): SOM.Object;
   VAR
-    flags: POINTER TO ARRAY OF BOOLEAN;
+    flags: Flags;
     resultValue: INT32;
     i: INT32;
     resultObj: IntegerObject;
@@ -86,8 +87,8 @@ END DoBenchmark;
 (* procedure to verify the benchmark's result. *)
 PROCEDURE VerifyResult*(b: Benchmark.Benchmark; result: SOM.Object): BOOLEAN;
 BEGIN
-  WITH result: IntegerObject DO
-    RETURN result.value = 669;
+  IF result IS IntegerObject THEN
+    RETURN result(IntegerObject).value = 669;
   ELSE
     Out.String("Sieve benchmark verification failed: result is not an IntegerObject."); Out.Ln;
     RETURN FALSE;

@@ -132,8 +132,8 @@ END DoBenchmark;
 (* procedure to verify the benchmark's result. *)
 PROCEDURE VerifyResult(b: Benchmark.Benchmark; result: SOM.Object): BOOLEAN;
 BEGIN
-  WITH result: BooleanObject DO
-    RETURN result.value; (* The benchmark is successful if the boolean value is TRUE *)
+  IF result IS BooleanObject THEN
+    RETURN result(BooleanObject).value; (* The benchmark is successful if the boolean value is TRUE *)
   ELSE
     (* This case should not be reached if the framework is used correctly. *)
     Out.String("Queens verification failed: result is not a BooleanObject."); Out.Ln;

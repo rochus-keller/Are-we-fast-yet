@@ -21,14 +21,14 @@ IMPORT Benchmark, SOM, Out, SYSTEM;
 CONST
   IDLER*     = 0;
   WORKER*    = 1;
-  HANDLER_A* = 2;
-  HANDLER_B* = 3;
-  DEVICE_A*  = 4;
-  DEVICE_B*  = 5;
-  NUM_TYPES* = 6;
-  DEVICE_PACKET_KIND* = 0;
-  WORK_PACKET_KIND*   = 1;
-  DATA_SIZE* = 4;
+  HANDLERA* = 2;
+  HANDLERB* = 3;
+  DEVICEA*  = 4;
+  DEVICEB*  = 5;
+  NUMTYPES* = 6;
+  DEVICEPACKETKIND* = 0;
+  WORKPACKETKIND*   = 1;
+  DATASIZE* = 4;
 
 TYPE
   INT32 = SOM.INT32;
@@ -41,10 +41,10 @@ TYPE
   RichardsScheduler* = POINTER TO RichardsSchedulerDesc;
   
   (* Data record types for task-specific data *)
-  DeviceTaskDataRecord* = POINTER TO DeviceTaskDataRecordDesc;
-  HandlerTaskDataRecord* = POINTER TO HandlerTaskDataRecordDesc;
-  IdleTaskDataRecord* = POINTER TO IdleTaskDataRecordDesc;
-  WorkerTaskDataRecord* = POINTER TO WorkerTaskDataRecordDesc;
+  DeviceTaskDataRecord* = POINTER TO DeviceTaskDataRD;
+  HandlerTaskDataRecord* = POINTER TO HandlerTaskDataRD;
+  IdleTaskDataRecord* = POINTER TO IdleTaskDataRD;
+  WorkerTaskDataRecord* = POINTER TO WorkerTaskDataRD;
 
   (* Task function signature *)
   TaskFunction* = PROCEDURE (work: Packet; handle: RBObject): TaskControlBlock;
@@ -60,7 +60,7 @@ TYPE
     identity: INT32;
     kind: INT32;
     datum: INT32;
-    data: ARRAY DATA_SIZE OF INT32;
+    data: ARRAY DATASIZE OF INT32;
   END;
 
   (* Task state - matches C struct TaskState *)
@@ -81,21 +81,21 @@ TYPE
   END;
 
   (* Task data records *)
-  DeviceTaskDataRecordDesc* = RECORD (RBObjectDesc)
+  DeviceTaskDataRD* = RECORD (RBObjectDesc)
     pending: Packet;
   END;
 
-  HandlerTaskDataRecordDesc* = RECORD (RBObjectDesc)
+  HandlerTaskDataRD* = RECORD (RBObjectDesc)
     workIn: Packet;
     deviceIn: Packet;
   END;
 
-  IdleTaskDataRecordDesc* = RECORD (RBObjectDesc)
+  IdleTaskDataRD* = RECORD (RBObjectDesc)
     control: INT32;
     count: INT32;
   END;
 
-  WorkerTaskDataRecordDesc* = RECORD (RBObjectDesc)
+  WorkerTaskDataRD* = RECORD (RBObjectDesc)
     destination: INT32;
     count: INT32;
   END;
@@ -123,14 +123,14 @@ TYPE
 
 VAR
   scheduler*: RichardsScheduler;
-  NO_WORK*: Packet;
-  NO_TASK*: TaskControlBlock;
+  NOWORK*: Packet;
+  NOTASK*: TaskControlBlock;
 
 (* --- Forward Declarations --- *)
 PROCEDURE^ HoldSelf(s: RichardsScheduler): TaskControlBlock;
 PROCEDURE^ Release(s: RichardsScheduler; identity: INT32): TaskControlBlock;
 PROCEDURE^ Wait(s: RichardsScheduler): TaskControlBlock;
-PROCEDURE^ QueuePacket(s: RichardsScheduler; p: Packet): TaskControlBlock;
+PROCEDURE^ QueuePacket(s: RichardsScheduler; packet: Packet): TaskControlBlock;
 
 (* --- Helper Procedures (matching C functions exactly) --- *)
 
@@ -138,14 +138,14 @@ PROCEDURE^ QueuePacket(s: RichardsScheduler; p: Packet): TaskControlBlock;
 PROCEDURE RBObjectAppend(packet: Packet; queueHead: Packet): Packet;
   VAR mouse, link: Packet;
 BEGIN
-  packet.link := NO_WORK;
-  IF queueHead = NO_WORK THEN
+  packet.link := NOWORK;
+  IF queueHead = NOWORK THEN
     RETURN packet;
   END;
   
   mouse := queueHead;
   link := mouse.link;
-  WHILE link # NO_WORK DO
+  WHILE link # NOWORK DO
     mouse := link;
     link := mouse.link;
   END;
@@ -165,10 +165,10 @@ BEGIN
   ELSE
     IF (data.control MOD 2) = 0 THEN
       data.control := data.control DIV 2;
-      RETURN Release(scheduler, DEVICE_A);
+      RETURN Release(scheduler, DEVICEA);
     ELSE
       data.control := SYSTEM.VAL(INT32, SYSTEM.VAL(SET, data.control DIV 2) / SYSTEM.VAL(SET, 53256));
-      RETURN Release(scheduler, DEVICE_B);
+      RETURN Release(scheduler, DEVICEB);
     END;
   END;
 END IdlerTaskFunction;
@@ -178,15 +178,15 @@ PROCEDURE WorkerTaskFunction(work: Packet; handle: RBObject): TaskControlBlock;
       i: INT32;
 BEGIN
   data := handle(WorkerTaskDataRecord);
-  IF work # NO_WORK THEN
-    IF data.destination = HANDLER_A THEN
-      data.destination := HANDLER_B;
+  IF work # NOWORK THEN
+    IF data.destination = HANDLERA THEN
+      data.destination := HANDLERB;
     ELSE
-      data.destination := HANDLER_A;
+      data.destination := HANDLERA;
     END;
     work.identity := data.destination;
     work.datum := 0;
-    FOR i := 0 TO DATA_SIZE - 1 DO
+    FOR i := 0 TO DATASIZE - 1 DO
       INC(data.count);
       IF data.count > 26 THEN
         data.count := 1;
@@ -205,8 +205,8 @@ PROCEDURE HandlerTaskFunction(work: Packet; handle: RBObject): TaskControlBlock;
       count: INT32;
 BEGIN
   data := handle(HandlerTaskDataRecord);
-  IF work # NO_WORK THEN
-    IF work.kind = WORK_PACKET_KIND THEN
+  IF work # NOWORK THEN
+    IF work.kind = WORKPACKETKIND THEN
       data.workIn := RBObjectAppend(work, data.workIn);
     ELSE
       data.deviceIn := RBObjectAppend(work, data.deviceIn);
@@ -214,14 +214,14 @@ BEGIN
   END;
   
   workPacket := data.workIn;
-  IF workPacket # NO_WORK THEN
+  IF workPacket # NOWORK THEN
     count := workPacket.datum;
-    IF count >= DATA_SIZE THEN
+    IF count >= DATASIZE THEN
       data.workIn := workPacket.link;
       RETURN QueuePacket(scheduler, workPacket);
     ELSE
       devicePacket := data.deviceIn;
-      IF devicePacket # NO_WORK THEN
+      IF devicePacket # NOWORK THEN
         data.deviceIn := devicePacket.link;
         devicePacket.datum := workPacket.data[count];
         workPacket.datum := count + 1;
@@ -241,13 +241,13 @@ PROCEDURE DeviceTaskFunction(work: Packet; handle: RBObject): TaskControlBlock;
 BEGIN
   data := handle(DeviceTaskDataRecord);
   functionWork := work;
-  IF functionWork # NO_WORK THEN
+  IF functionWork # NOWORK THEN
     data.pending := functionWork;
     RETURN HoldSelf(scheduler);
   ELSE
     functionWork := data.pending;
-    IF functionWork # NO_WORK THEN
-      data.pending := NO_WORK;
+    IF functionWork # NOWORK THEN
+      data.pending := NOWORK;
       RETURN QueuePacket(scheduler, functionWork);
     ELSE
       RETURN Wait(scheduler);
@@ -266,7 +266,7 @@ BEGIN
   p.identity := identity;
   p.kind := kind;
   p.datum := 0;
-  FOR i := 0 TO DATA_SIZE - 1 DO
+  FOR i := 0 TO DATASIZE - 1 DO
     p.data[i] := 0;
   END;
   RETURN p;
@@ -303,12 +303,12 @@ BEGIN
   ts.taskWaiting := TRUE;
 END TaskStateWaiting;
 
-PROCEDURE TaskStateWaitingWithPacket(ts: TaskState);
+PROCEDURE TaskStateWaitWithPacket(ts: TaskState);
 BEGIN
   ts.taskHolding := FALSE;
   ts.taskWaiting := TRUE;
   ts.packetPending := TRUE;
-END TaskStateWaitingWithPacket;
+END TaskStateWaitWithPacket;
 
 PROCEDURE IsTaskHoldingOrWaiting(ts: TaskState): BOOLEAN;
 BEGIN
@@ -320,7 +320,7 @@ BEGIN
   RETURN ts.packetPending & ts.taskWaiting & ~ts.taskHolding;
 END IsWaitingWithPacket;
 
-PROCEDURE CreateTask(s: RichardsScheduler; identity: INT32; priority: INT32; work: Packet; state: TaskState; data: RBObject; fn: TaskFunction): TaskControlBlock;
+PROCEDURE CreateTask(s: RichardsScheduler; identity: INT32; priority: INT32; work: Packet; state: TaskState; data: RBObject; fn: TaskFunction);
   VAR t: TaskControlBlock;
 BEGIN
   NEW(t);
@@ -335,14 +335,13 @@ BEGIN
   t.taskHolding := state.taskHolding;
   s.taskList := t;
   s.taskTable[identity] := t;
-  RETURN t;
 END CreateTask;
 
 PROCEDURE FindTask(s: RichardsScheduler; identity: INT32): TaskControlBlock;
   VAR t: TaskControlBlock;
 BEGIN
   t := s.taskTable[identity];
-  IF t = NO_TASK THEN
+  IF t = NOTASK THEN
     HALT(101);
   END;
   RETURN t;
@@ -373,9 +372,9 @@ BEGIN
   RETURN s.currentTask;
 END Wait;
 
-PROCEDURE AddInputAndCheckPriority(task: TaskControlBlock; packet: Packet; oldTask: TaskControlBlock): TaskControlBlock;
+PROCEDURE AddInputAndCheckPrio(task: TaskControlBlock; packet: Packet; oldTask: TaskControlBlock): TaskControlBlock;
 BEGIN
-  IF task.input = NO_WORK THEN
+  IF task.input = NOWORK THEN
     task.input := packet;
     task.packetPending := TRUE;
     IF task.priority > oldTask.priority THEN
@@ -385,20 +384,20 @@ BEGIN
     task.input := RBObjectAppend(packet, task.input);
   END;
   RETURN oldTask;
-END AddInputAndCheckPriority;
+END AddInputAndCheckPrio;
 
 PROCEDURE QueuePacket(s: RichardsScheduler; packet: Packet): TaskControlBlock;
   VAR task: TaskControlBlock;
 BEGIN
   task := FindTask(s, packet.identity);
-  IF task = NO_TASK THEN
-    RETURN NO_TASK;
+  IF task = NOTASK THEN
+    RETURN NOTASK;
   END;
   
   INC(s.queueCount);
-  packet.link := NO_WORK;
+  packet.link := NOWORK;
   packet.identity := s.currentTaskIdentity;
-  RETURN AddInputAndCheckPriority(task, packet, s.currentTask);
+  RETURN AddInputAndCheckPrio(task, packet, s.currentTask);
 END QueuePacket;
 
 PROCEDURE RunTask(task: TaskControlBlock): TaskControlBlock;
@@ -407,13 +406,13 @@ BEGIN
   IF IsWaitingWithPacket(task) THEN
     message := task.input;
     task.input := message.link;
-    IF task.input # NO_WORK THEN
+    IF task.input # NOWORK THEN
       TaskStatePacketPending(task);
     ELSE
       TaskStateRunning(task);
     END;
   ELSE
-    message := NO_WORK;
+    message := NOWORK;
   END;
   RETURN task.function(message, task.handle);
 END RunTask;
@@ -421,7 +420,7 @@ END RunTask;
 PROCEDURE Schedule(s: RichardsScheduler);
 BEGIN
   s.currentTask := s.taskList;
-  WHILE s.currentTask # NO_TASK DO
+  WHILE s.currentTask # NOTASK DO
     IF IsTaskHoldingOrWaiting(s.currentTask) THEN
       s.currentTask := s.currentTask.link;
     ELSE
@@ -446,43 +445,43 @@ BEGIN
   TaskStateWaiting(waiting);
   
   waitingWithPacket := CreateTaskState();
-  TaskStateWaitingWithPacket(waitingWithPacket);
+  TaskStateWaitWithPacket(waitingWithPacket);
   
   NEW(idleData);
   idleData.control := 1;
   idleData.count := 10000;
-  CreateTask(s, IDLER, 0, NO_WORK, running, idleData, IdlerTaskFunction);
+  CreateTask(s, IDLER, 0, NOWORK, running, idleData, IdlerTaskFunction);
   
-  workQ := CreatePacket(NO_WORK, WORKER, WORK_PACKET_KIND);
-  workQ := CreatePacket(workQ, WORKER, WORK_PACKET_KIND);
+  workQ := CreatePacket(NOWORK, WORKER, WORKPACKETKIND);
+  workQ := CreatePacket(workQ, WORKER, WORKPACKETKIND);
   NEW(workerData);
-  workerData.destination := HANDLER_A;
+  workerData.destination := HANDLERA;
   workerData.count := 0;
   CreateTask(s, WORKER, 1000, workQ, waitingWithPacket, workerData, WorkerTaskFunction);
   
-  workQ := CreatePacket(NO_WORK, DEVICE_A, DEVICE_PACKET_KIND);
-  workQ := CreatePacket(workQ, DEVICE_A, DEVICE_PACKET_KIND);
-  workQ := CreatePacket(workQ, DEVICE_A, DEVICE_PACKET_KIND);
+  workQ := CreatePacket(NOWORK, DEVICEA, DEVICEPACKETKIND);
+  workQ := CreatePacket(workQ, DEVICEA, DEVICEPACKETKIND);
+  workQ := CreatePacket(workQ, DEVICEA, DEVICEPACKETKIND);
   NEW(handlerAData);
-  handlerAData.workIn := NO_WORK;
-  handlerAData.deviceIn := NO_WORK;
-  CreateTask(s, HANDLER_A, 2000, workQ, waitingWithPacket, handlerAData, HandlerTaskFunction);
+  handlerAData.workIn := NOWORK;
+  handlerAData.deviceIn := NOWORK;
+  CreateTask(s, HANDLERA, 2000, workQ, waitingWithPacket, handlerAData, HandlerTaskFunction);
   
-  workQ := CreatePacket(NO_WORK, DEVICE_B, DEVICE_PACKET_KIND);
-  workQ := CreatePacket(workQ, DEVICE_B, DEVICE_PACKET_KIND);
-  workQ := CreatePacket(workQ, DEVICE_B, DEVICE_PACKET_KIND);
+  workQ := CreatePacket(NOWORK, DEVICEB, DEVICEPACKETKIND);
+  workQ := CreatePacket(workQ, DEVICEB, DEVICEPACKETKIND);
+  workQ := CreatePacket(workQ, DEVICEB, DEVICEPACKETKIND);
   NEW(handlerBData);
-  handlerBData.workIn := NO_WORK;
-  handlerBData.deviceIn := NO_WORK;
-  CreateTask(s, HANDLER_B, 3000, workQ, waitingWithPacket, handlerBData, HandlerTaskFunction);
+  handlerBData.workIn := NOWORK;
+  handlerBData.deviceIn := NOWORK;
+  CreateTask(s, HANDLERB, 3000, workQ, waitingWithPacket, handlerBData, HandlerTaskFunction);
   
   NEW(deviceAData);
-  deviceAData.pending := NO_WORK;
-  CreateTask(s, DEVICE_A, 4000, NO_WORK, waiting, deviceAData, DeviceTaskFunction);
+  deviceAData.pending := NOWORK;
+  CreateTask(s, DEVICEA, 4000, NOWORK, waiting, deviceAData, DeviceTaskFunction);
   
   NEW(deviceBData);
-  deviceBData.pending := NO_WORK;
-  CreateTask(s, DEVICE_B, 5000, NO_WORK, waiting, deviceBData, DeviceTaskFunction);
+  deviceBData.pending := NOWORK;
+  CreateTask(s, DEVICEB, 5000, NOWORK, waiting, deviceBData, DeviceTaskFunction);
   
   Schedule(s);
   
@@ -497,9 +496,9 @@ PROCEDURE DoBenchmark*(b: Benchmark.Benchmark): SOM.Object;
       resultObj: BooleanObject;
 BEGIN
   NEW(s);
-  NEW(s.taskTable, NUM_TYPES);
-  s.taskList := NO_TASK;
-  s.currentTask := NO_TASK;
+  NEW(s.taskTable, NUMTYPES);
+  s.taskList := NOTASK;
+  s.currentTask := NOTASK;
   s.currentTaskIdentity := 0;
   s.queueCount := 0;
   s.holdCount := 0;
@@ -514,8 +513,8 @@ END DoBenchmark;
 
 PROCEDURE VerifyResult*(b: Benchmark.Benchmark; result: SOM.Object): BOOLEAN;
 BEGIN
-  WITH result: BooleanObject DO
-    RETURN result.value;
+  IF result IS BooleanObject THEN
+    RETURN result(BooleanObject).value;
   ELSE
     RETURN FALSE;
   END;
@@ -532,6 +531,6 @@ BEGIN
 END Create;
 
 BEGIN
-  NO_WORK := NIL;
-  NO_TASK := NIL;
+  NOWORK := NIL;
+  NOTASK := NIL;
 END Richards.

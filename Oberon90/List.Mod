@@ -116,8 +116,8 @@ END DoBenchmark;
 (* procedure to verify the benchmark's result. *)
 PROCEDURE VerifyResult(b: Benchmark.Benchmark; result: SOM.Object): BOOLEAN;
 BEGIN
-  WITH result: IntegerObject DO
-    RETURN result.value = 10;
+  IF result IS IntegerObject THEN
+    RETURN result(IntegerObject).value = 10;
   ELSE
     Out.String("List verification failed: result is not an IntegerObject."); Out.Ln;
     RETURN FALSE;

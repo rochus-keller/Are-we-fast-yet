@@ -148,8 +148,8 @@ END DoBenchmark;
 (* Public procedure to verify the benchmark's result. *)
 PROCEDURE VerifyResult*(b: Benchmark.Benchmark; result: SOM.Object): BOOLEAN;
 BEGIN
-  WITH result: IntegerObject DO
-    RETURN result.value = 1331;
+  IF result IS IntegerObject THEN
+    RETURN result(IntegerObject).value = 1331;
   ELSE
     Out.String("Bounce verification failed: result is not an IntegerObject."); Out.Ln;
     RETURN FALSE;

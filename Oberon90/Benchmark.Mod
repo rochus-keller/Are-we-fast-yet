@@ -67,7 +67,7 @@ BEGIN
   NEW(b);
   b.DoBenchmark := DoBenchmark;
   b.VerifyResult := VerifyResult;
-  b.InnerBenchmarkLoop := Benchmark.InnerBenchmarkLoop;
+  b.InnerBenchmarkLoop := InnerBenchmarkLoop;
   RETURN b;
 END Create;
 

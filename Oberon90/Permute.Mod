@@ -97,8 +97,8 @@ END DoBenchmark;
 (* procedure to verify the benchmark's result. *)
 PROCEDURE VerifyResult*(b: Benchmark.Benchmark; result: SOM.Object): BOOLEAN;
 BEGIN
-  WITH result: IntegerObject DO
-    RETURN result.value = 8660;
+  IF result IS IntegerObject THEN
+    RETURN result(IntegerObject).value = 8660;
   ELSE
     Out.String("Permute verification failed: result is not an IntegerObject."); Out.Ln;
     RETURN FALSE;

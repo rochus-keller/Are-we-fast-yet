@@ -39,7 +39,7 @@ TYPE
   
   Towers = POINTER TO TowersDesc;
   
-  Result = POINTER TO RECORD (SOM.Object) res: INT32 END;
+  Result = POINTER TO RECORD (SOM.ObjectDesc) res: INT32 END;
 
 PROCEDURE CreateTowersDisk(size: INT32): TowersDisk;
   VAR disk: TowersDisk;
@@ -54,8 +54,8 @@ PROCEDURE PushDisk(b: Towers; disk: TowersDisk; pile: INT32);
   VAR top: SOM.Object;
 BEGIN
   top := SOM.VectorAt(b.piles, pile);
-  WITH top: TowersDisk DO
-    IF disk.size >= top.size THEN HALT(101) END;
+  IF top IS TowersDisk THEN
+    IF disk.size >= top(TowersDisk).size THEN HALT(101) END;
   ELSE
     (* pile is empty *)
   END;

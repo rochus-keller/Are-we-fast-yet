@@ -17,8 +17,8 @@ IMPORT Benchmark, SOM, MathL, Out;
 
 CONST
   PI* = 3.141592653589793;
-  SOLAR_MASS* = 4.0 * PI * PI;
-  DAYS_PER_YEAR* = 365.24;
+  SOLARMASS* = 4.0 * PI * PI;
+  DAYSPERYEAR* = 365.24;
 
 TYPE
   REAL64 = SOM.F64; 
@@ -55,10 +55,10 @@ BEGIN
   b.x := x;
   b.y := y;
   b.z := z;
-  b.vx := vx * DAYS_PER_YEAR;
-  b.vy := vy * DAYS_PER_YEAR;
-  b.vz := vz * DAYS_PER_YEAR;
-  b.mass := mass * SOLAR_MASS;
+  b.vx := vx * DAYSPERYEAR;
+  b.vy := vy * DAYSPERYEAR;
+  b.vz := vz * DAYSPERYEAR;
+  b.mass := mass * SOLARMASS;
   RETURN b;
 END NewBody;
 
@@ -98,9 +98,9 @@ END Sun;
 (* Offsets the sun's momentum to balance the system. *)
 PROCEDURE OffsetMomentum(sun: Body; px, py, pz: REAL64);
 BEGIN
-  sun.vx := -px / SOLAR_MASS;
-  sun.vy := -py / SOLAR_MASS;
-  sun.vz := -pz / SOLAR_MASS;
+  sun.vx := -px / SOLARMASS;
+  sun.vy := -py / SOLARMASS;
+  sun.vz := -pz / SOLARMASS;
 END OffsetMomentum;
 
 (* Creates the complete system of bodies. *)
@@ -183,8 +183,27 @@ BEGIN
   RETURN e;
 END Energy;
 
+(* Verification depends on the iteration count. *)
+PROCEDURE VerifyResult*(b: Benchmark.Benchmark; result: SOM.Object; innerIterations: INT32): BOOLEAN;
+  VAR val: REAL64;
+BEGIN
+  IF result IS RealObject THEN
+    val := result(RealObject).value;
+    IF innerIterations = 250000 THEN RETURN ABS(val - (-0.1690859889909308)) < 1.0E-14
+    ELSIF innerIterations = 1 THEN RETURN ABS(val - (-0.16907495402506745)) < 1.0E-14
+    ELSE
+      Out.String("No verification result for "); Out.Int(innerIterations, 0); Out.String(" found"); Out.Ln;
+      Out.String("Result is: "); Out.LongReal(val, 20); Out.Ln;
+      RETURN FALSE;
+    END;
+  ELSE
+    Out.String("NBody verification failed: result is not a RealObject."); Out.Ln;
+    RETURN FALSE;
+  END;
+END VerifyResult;
+
 (* A custom inner loop for this benchmark. *)
-PROCEDURE NBodyInnerBenchmarkLoop*(b: Benchmark.Benchmark; innerIterations: INTEGER): BOOLEAN;
+PROCEDURE InnerBenchmarkLoop*(b: Benchmark.Benchmark; innerIterations: INTEGER): BOOLEAN;
   VAR
     system: NBodySystem;
     i: INT32;
@@ -204,26 +223,7 @@ BEGIN
   NEW(resultObj);
   resultObj.value := energyResult;
   RETURN VerifyResult(b, resultObj, innerIterations);
-END NBodyInnerBenchmarkLoop;
-
-(* Verification depends on the iteration count. *)
-PROCEDURE VerifyResult*(b: Benchmark.Benchmark; result: SOM.Object; innerIterations: INT32): BOOLEAN;
-  VAR val: REAL64;
-BEGIN
-  WITH result: RealObject DO
-    val := result.value;
-    IF innerIterations = 250000 THEN RETURN ABS(val - (-0.1690859889909308)) < 1.0E-14
-    ELSIF innerIterations = 1 THEN RETURN ABS(val - (-0.16907495402506745)) < 1.0E-14
-    ELSE
-      Out.String("No verification result for "); Out.Int(innerIterations, 0); Out.String(" found"); Out.Ln;
-      Out.String("Result is: "); Out.LongReal(val, 20); Out.Ln;
-      RETURN FALSE;
-    END;
-  ELSE
-    Out.String("NBody verification failed: result is not a RealObject."); Out.Ln;
-    RETURN FALSE;
-  END;
-END VerifyResult;
+END InnerBenchmarkLoop;
 
 (* Public factory procedure to create a new NBody benchmark instance. *)
 PROCEDURE Create*(): Benchmark.Benchmark;
@@ -231,7 +231,7 @@ PROCEDURE Create*(): Benchmark.Benchmark;
 BEGIN
   NEW(n);
   (* This benchmark has a custom loop and verification, so we assign its procedures. *)
-  n.InnerBenchmarkLoop := NBodyInnerBenchmarkLoop;
+  n.InnerBenchmarkLoop := InnerBenchmarkLoop;
   RETURN n;
 END Create;
 

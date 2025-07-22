@@ -26,9 +26,9 @@ MODULE SOM;
 IMPORT SYSTEM, Out;
 
 CONST
-  INITIAL_VECTOR_SIZE* = 50;
-  INITIAL_SET_SIZE*    = 10;
-  INITIAL_CAPACITY*    = 16;
+  INITIALVECTORSIZE* = 50;
+  INITIALSETSIZE*    = 10;
+  INITIALCAPACITY*    = 16;
 
 TYPE
   INT32* = LONGINT;
@@ -40,7 +40,9 @@ TYPE
 
   (* Generic procedure types for collection iteration.
      The 'data' parameter is crucial for passing context. *)
-  Context* = POINTER TO RECORD END;
+  Context* = POINTER TO ContextDesc;
+  ContextDesc = RECORD END;
+  
   ValueIterator* = PROCEDURE (item: Object; data: Context);
   TestIterator*  = PROCEDURE (item: Object; data: Context): BOOLEAN;
   Compare*       = PROCEDURE (a, b: Object): INTEGER;
@@ -49,10 +51,11 @@ TYPE
   Vector*     = POINTER TO VectorDesc;
   Set*        = POINTER TO SetDesc;
   Dictionary* = POINTER TO DictionaryDesc;
+  Storage* = POINTER TO ARRAY OF Object;
 
   (* --- Record types defining the structure of collections --- *)
   VectorDesc* = RECORD (ObjectDesc)
-    storage: POINTER TO ARRAY OF Object;
+    storage: Storage;
     firstIdx, lastIdx: INT32;
   END;
 
@@ -62,7 +65,7 @@ TYPE
 
   (* Helper records for passing context to iterators *)
   SetContainsContext = POINTER TO SetContainsContextDesc;
-  SetContainsContextDesc = RECORD (Context)
+  SetContainsContextDesc = RECORD (ContextDesc)
     objToFind: Object;
     found: BOOLEAN;
   END;
@@ -123,7 +126,7 @@ END SetContainsCheck;
 
 PROCEDURE EnlargeVector(v: Vector; minSize: INT32);
   VAR newLength: INT32;
-      newStorage: POINTER TO ARRAY OF Object;
+      newStorage: Storage;
       i: INT32;
 BEGIN
   newLength := LEN(v.storage^);
@@ -142,7 +145,7 @@ PROCEDURE CreateVector*(initialSize: INT32): Vector;
   VAR v: Vector; size: INT32;
 BEGIN
   NEW(v);
-  IF initialSize = 0 THEN size := INITIAL_VECTOR_SIZE ELSE size := initialSize END;
+  IF initialSize = 0 THEN size := INITIALVECTORSIZE ELSE size := initialSize END;
   NEW(v.storage, size);
   v.firstIdx := 0; v.lastIdx := 0;
   RETURN v;
@@ -166,7 +169,7 @@ BEGIN
 END VectorAtPut;
 
 PROCEDURE VectorAppend*(v: Vector; elem: Object);
-  VAR newStorage: POINTER TO ARRAY OF Object; i: INT32;
+  VAR newStorage: Storage; i: INT32;
 BEGIN
   IF v.lastIdx >= LEN(v.storage^) THEN
     NEW(newStorage, LEN(v.storage^) * 2);
@@ -206,7 +209,7 @@ END VectorHasSome;
 
 PROCEDURE VectorRemove*(v: Vector; obj: Object): BOOLEAN;
   VAR
-    newStorage: POINTER TO ARRAY OF Object;
+    newStorage: Storage;
     newLast, i, j: INT32;
     found: BOOLEAN;
 BEGIN
