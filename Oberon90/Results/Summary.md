@@ -42,7 +42,7 @@ index checking costs ~8% performance. For a fair comparison with C it makes sens
 It's interesting to note that the -O1 optimization is much closer to -O2 than to -O0, so the minimal set of optimizations seem to have the maximum effect. It's also interesting to see that the performance gain when going from x86 to x64 gain is smaller than often claimed (only ~18%).
 
 
-The following table lists the benchmarks run on the EliteBook 2530p, with the labels having the same meaning as described above. It's an x86 only machine, and only the \x version 
+The following table lists the benchmark runs on the EliteBook 2530p, with the labels having the same meaning as described above. It's an x86 only machine, and only the \x version 
 of Oberon was run. Comparing with the T480 results show that there is a speed-up of factor 2 to 3 when going from the 2009 to 2018 processor generation. It can also be seen, that
 the optimization capability of the GCC compiler apparently increased by factor 1.4 over ~10 years. Given these two data points and assuming linear growth, the speed-up factor
 of compilers in 1992 from unoptimized to optimized code was around 1.6 (when Are-we-fast-yet would have been used instead of Dhrystone). 
@@ -55,7 +55,33 @@ Another interesting observation is that unoptimized GCC 4.8 seems to generate fa
 ### Discussion
 
 The results show that the aforementioned claim very likely doesn't hold. The Oberon compiler apparently generates good code (which runs faster than the unoptimized code of 
-some GCC versions), but the performance is obviously far away from what an optimizer today can do. 
+some GCC versions), but the performance is obviously far away from what an optimizer can do. 
 The present results indicate that the SPARC result reported by Brandis et al. was likely due to errors in the Sun compiler. 
 This also refutes claims like "Wirth's compilers achieved 80% of the performance of optimizing compilers with 20% of the complexity", which can be found in 
 times on social media. 
+
+### Update July 25
+
+This section addresses [the concern](https://lists.inf.ethz.ch/pipermail/oberon/2025/017064.html) that the more modern GCC versions used 
+for the present measurement would emit instructions which were not available at the time or not used by the OP2 version in question (thus possibly preventing a fair comparison).
+
+When Mössenböck made his claim (see above), the Oberon Systems 3 and 4 were still in development. Since the Pentium Pro appeared in 1995, so the i686 instruction set, to which both 
+GCC versions defaulted, seemed appropriate. 
+
+In 1993, when the implementation of the OP2 x86 backend started, the Pentium (i586 instruction set) was launched, and the i486 instruction set was already on the market
+for four years (introduced in 1989). The i386 instruction set dates back to 1985, before the first Oberon System even existed. 
+
+Unfortunately, a "period-correct" GCC version from 1993 (i.e. GCC 2.4.x) is not available, but we can limit what instruction set GCC is using with the `-march` option. 
+
+The following table is an extension of the EliteBook 2530p table above. The C99/-O2/i686, C99/-O0/i686 and Oberon columns were copied from the mentioned table. The i486 and i386
+average/factor columns show the results of the benchmarks compiled with the `-march=i486` and `-march=i386` GCC options, which limit the instruction set emitted by GCC. It can
+be seen that **the difference between the runs with different instruction sets is very small and doesn’t alter the overall conclusion**.
+
+![EliteBook results](./EliteBookResultsMultiarch.png)
+
+
+
+
+
+
+
