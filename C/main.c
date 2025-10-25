@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include "RedBlackTree.h"
 #include "som/Dictionary.h"
+#include <stdarg.h>
 
 static int compare(const Bytes l, const Bytes r)
 {
