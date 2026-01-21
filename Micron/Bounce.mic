@@ -33,10 +33,10 @@ module Bounce
 	procedure Ball_init(me: ^Ball)
 	begin
 		me.x := 0; me.y := 0; me.xVel := 0; me.yVel := 0
-		me.x := signed(Random.next() mod 500u)
-		me.y := signed(Random.next() mod 500u)
-		me.xVel := signed(Random.next() mod 300u) - 150
-		me.yVel := signed(Random.next() mod 300u) - 150
+		me.x := cast(int32,Random.next() mod 500)
+		me.y := cast(int32,Random.next() mod 500)
+		me.xVel := cast(int32,Random.next() mod 300) - 150
+		me.yVel := cast(int32,Random.next() mod 300) - 150
 	end Ball_init
 	
 	procedure Ball_bounce(me: ^Ball): boolean

@@ -24,7 +24,7 @@
 module Random
 
 const
-	init = 74_755_u32
+	init = 74_755
 	
 var
 	seed : u32
@@ -36,7 +36,7 @@ end reset
 
 proc next*():u32
 begin
-    seed := bitand(((seed * 1_309_u32) + 13_849_u32), 65_535_u32)
+    seed := bitand(((seed * 1_309) + 13_849), 65_535u)
     return seed
 end next
 
