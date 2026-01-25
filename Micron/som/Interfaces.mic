@@ -21,7 +21,7 @@
  * THE SOFTWARE.
  *)
  
-module Interfaces(T)
+module Interfaces(T) [visibility="*"]
 
 type
 	Data = pointer to any

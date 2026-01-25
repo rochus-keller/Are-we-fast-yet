@@ -21,7 +21,7 @@
  * THE SOFTWARE.
  *)
  
-module Vector(T)
+module Vector(T) [visibility="*"]
 
 import I := Interfaces(T)
 
