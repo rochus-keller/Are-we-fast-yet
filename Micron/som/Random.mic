@@ -36,7 +36,7 @@ end reset
 
 proc next*():u32
 begin
-    seed := bitand(((seed * 1_309) + 13_849), 65_535u)
+    seed := band(((seed * 1_309) + 13_849), 65_535u)
     return seed
 end next
 
