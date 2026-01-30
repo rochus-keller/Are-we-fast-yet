@@ -27,14 +27,14 @@ const
 	init = 74_755
 	
 var
-	seed : u32
+	seed : uint32
 
 proc reset*()
 begin
     seed := init
 end reset
 
-proc next*():u32
+proc next*():uint32
 begin
     seed := band(((seed * 1_309) + 13_849), 65_535u)
     return seed

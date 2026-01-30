@@ -76,6 +76,6 @@ begin
 end runOnce
 
 begin
-    runAll()
-    //runOnce()
+    //runAll()
+    runOnce()
 end Main
