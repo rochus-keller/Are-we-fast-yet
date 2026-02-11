@@ -23,8 +23,8 @@
  
 MODULE Harness;
 
-IMPORT Out, Benchmark, Towers, Sieve, Queens, Storage, Permute, Mandelbrot,
-       List, Bounce, NBody, Richards, Unix, S := SYSTEM;
+IMPORT Out, Benchmark, Sieve, Queens, Storage, Permute, Mandelbrot,
+       List, Bounce, Richards, Towers, NBody, (*Unix,*) Input, S := SYSTEM;
 
 TYPE
   Run = POINTER TO RunDesc;
@@ -37,35 +37,38 @@ TYPE
   END;
 
 VAR
-    timeStart: Unix.Timeval;
+    timeStart: LONGINT; (*Unix.Timeval;*)
     
 PROCEDURE InitTime ();
  VAR res: LONGINT;
 BEGIN
- res := Unix.Gettimeofday(S.ADR(timeStart), 0);
+ res := Input.Time(); (*Unix.Gettimeofday(S.ADR(timeStart), 0);*)
 END  InitTime; 
 
 PROCEDURE Time (): LONGINT;
- VAR now: Unix.Timeval; res, sec, usec: LONGINT;
+ (*VAR now: Unix.Timeval; res, sec, usec: LONGINT;*)
 BEGIN
+    RETURN Input.Time();
+    (*
  res := Unix.Gettimeofday(S.ADR(now), 0);
  sec := now.sec - timeStart.sec;
  usec := now.usec - timeStart.usec;
  RETURN sec*1000000 + usec;
+ *)
 END  Time; 
 
 PROCEDURE SelectBenchmark(name: ARRAY OF CHAR): Benchmark.Benchmark;
 BEGIN
-  IF name = "Towers" THEN RETURN Towers.Create()
-  ELSIF name = "Sieve" THEN RETURN Sieve.Create()
+  IF name = "Sieve" THEN RETURN Sieve.Create()
   ELSIF name = "Queens" THEN RETURN Queens.Create()
   ELSIF name = "Storage" THEN RETURN Storage.Create()
   ELSIF name = "Permute" THEN RETURN Permute.Create()
   ELSIF name = "Mandelbrot" THEN RETURN Mandelbrot.Create()
   ELSIF name = "List" THEN RETURN List.Create()
   ELSIF name = "Bounce" THEN RETURN Bounce.Create()
-  ELSIF name = "NBody" THEN RETURN NBody.Create()
   ELSIF name = "Richards" THEN RETURN Richards.Create()
+  ELSIF name = "Towers" THEN RETURN Towers.Create()
+  ELSIF name = "NBody" THEN RETURN NBody.Create()
   (*
   ELSIF name = "Json" THEN RETURN Json.Create()
   ELSIF name = "CD" THEN RETURN CD.Create()
@@ -146,12 +149,12 @@ BEGIN
     DoRun("Bounce", 1, 1);
     DoRun("List", 1, 1);
     DoRun("Mandelbrot", 1, 1);
-    (*DoRun("NBody", 1, 1);*)
+    DoRun("NBody", 1, 1);
     DoRun("Permute", 1, 1);
     DoRun("Queens", 1, 1);
     DoRun("Sieve", 1, 1);
     DoRun("Storage", 1, 1);
-    (*DoRun("Towers", 1, 1);*)
+    DoRun("Towers", 1, 1);
 END TestRun;
 
 PROCEDURE FullRun*;
@@ -160,15 +163,16 @@ BEGIN
     DoRun("Bounce", 1500, 1);
     DoRun("List", 1500, 1);
     DoRun("Mandelbrot", 500, 1);
-    (*DoRun("NBody", 250000, 1);*)
+    DoRun("NBody", 250000, 1);
     DoRun("Permute", 1000, 1);
     DoRun("Queens", 1000, 1);
     DoRun("Sieve", 3000, 1);
     DoRun("Storage", 1000, 1);
-    (*DoRun("Towers", 600, 1);*)
+    DoRun("Towers", 600, 1);
 END FullRun;
 
 BEGIN
-    InitTime
+    InitTime;
+    FullRun
 END Harness.
 

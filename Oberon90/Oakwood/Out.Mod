@@ -1,0 +1,18 @@
+MODULE Out;
+
+PROCEDURE~ Open*; 
+
+PROCEDURE~ Char* (ch: CHAR); 
+
+PROCEDURE~ String* (str: ARRAY OF CHAR); 
+
+PROCEDURE~ Int* (i: LONGINT; n: INTEGER); 
+
+PROCEDURE~ Real* (x: REAL; n: INTEGER); 
+
+PROCEDURE~ LongReal* (x: LONGREAL; n: INTEGER); 
+
+PROCEDURE~ Ln*; 
+
+END Out.
+
