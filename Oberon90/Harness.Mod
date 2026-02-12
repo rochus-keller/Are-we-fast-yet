@@ -24,7 +24,8 @@
 MODULE Harness;
 
 IMPORT Out, Benchmark, Sieve, Queens, Storage, Permute, Mandelbrot,
-       List, Bounce, Richards, Towers, NBody, (*Unix,*) Input, S := SYSTEM;
+       List, Bounce, Richards, Towers, NBody, Havlak,
+       (*Unix,*) Input, S := SYSTEM;
 
 TYPE
   Run = POINTER TO RunDesc;
@@ -69,13 +70,13 @@ BEGIN
   ELSIF name = "Richards" THEN RETURN Richards.Create()
   ELSIF name = "Towers" THEN RETURN Towers.Create()
   ELSIF name = "NBody" THEN RETURN NBody.Create()
+  ELSIF name = "Havlak" THEN RETURN Havlak.Create()
   (*
   ELSIF name = "Json" THEN RETURN Json.Create()
   ELSIF name = "CD" THEN RETURN CD.Create()
   ELSIF name = "DeltaBlue" THEN RETURN DeltaBlue.Create()
-  ELSIF name = "Havlak" THEN RETURN Havlak.Create()
   *)
-  ELSE Out.String("Benchmark not found: "); Out.String(name); Out.Ln; HALT(100);
+  ELSE Out.String("Benchmark not found: "); Out.String(name); Out.Ln; (*HALT(100);*)
   END;
   RETURN NIL;
 END SelectBenchmark;
@@ -86,7 +87,7 @@ BEGIN
   startTime := Time();
   IF ~run.benchmark.InnerBenchmarkLoop(run.benchmark,run.innerIterations) THEN
     Out.String("Benchmark failed with incorrect result."); Out.Ln;
-    HALT(101);
+    (*HALT(101);*)
   END;
   endTime := Time();
   runTime := endTime - startTime;
@@ -139,13 +140,19 @@ BEGIN
   run.innerIterations := innerIterations;
   run.total := 0;
   run.benchmark := SelectBenchmark(run.name);
-  RunBenchmark(run);
-  PrintTotal(run);
+  IF run.benchmark # NIL THEN
+    RunBenchmark(run);
+    PrintTotal(run);
+  END;
 END DoRun;
 
 PROCEDURE TestRun*;
 BEGIN
+    DoRun("DeltaBlue", 1, 1 );
     DoRun("Richards", 1, 1);
+    DoRun("Json", 1, 1);
+    DoRun("Havlak", 1, 1 );
+    DoRun("CD", 1, 1);
     DoRun("Bounce", 1, 1);
     DoRun("List", 1, 1);
     DoRun("Mandelbrot", 1, 1);
@@ -159,7 +166,11 @@ END TestRun;
 
 PROCEDURE FullRun*;
 BEGIN
+    DoRun("DeltaBlue", 12000, 1 );
     DoRun("Richards", 100, 1);
+    DoRun("Json", 100, 1);
+    DoRun("Havlak", 10, 1 );
+    DoRun("CD", 250, 2);
     DoRun("Bounce", 1500, 1);
     DoRun("List", 1500, 1);
     DoRun("Mandelbrot", 500, 1);
