@@ -24,7 +24,7 @@
 MODULE Harness;
 
 IMPORT Out, Benchmark, Sieve, Queens, Storage, Permute, Mandelbrot,
-       List, Bounce, Richards, Towers, NBody, Havlak,
+       List, Bounce, Richards, Towers, NBody, Havlak, DeltaBlue,
        (*Unix,*) Input, S := SYSTEM;
 
 TYPE
@@ -71,10 +71,10 @@ BEGIN
   ELSIF name = "Towers" THEN RETURN Towers.Create()
   ELSIF name = "NBody" THEN RETURN NBody.Create()
   ELSIF name = "Havlak" THEN RETURN Havlak.Create()
+  ELSIF name = "DeltaBlue" THEN RETURN DeltaBlue.Create()
   (*
   ELSIF name = "Json" THEN RETURN Json.Create()
   ELSIF name = "CD" THEN RETURN CD.Create()
-  ELSIF name = "DeltaBlue" THEN RETURN DeltaBlue.Create()
   *)
   ELSE Out.String("Benchmark not found: "); Out.String(name); Out.Ln; (*HALT(100);*)
   END;
