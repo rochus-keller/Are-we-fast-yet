@@ -24,8 +24,8 @@
 MODULE Harness;
 
 IMPORT Out, Benchmark, Sieve, Queens, Storage, Permute, Mandelbrot,
-       List, Bounce, Richards, Towers, NBody, Havlak, DeltaBlue,
-       (*Unix,*) Input, S := SYSTEM;
+       List, Bounce, Richards, Towers, NBody, Havlak, DeltaBlue, 
+       Json, CD, (*Unix,*) Input, S := SYSTEM;
 
 TYPE
   Run = POINTER TO RunDesc;
@@ -72,10 +72,8 @@ BEGIN
   ELSIF name = "NBody" THEN RETURN NBody.Create()
   ELSIF name = "Havlak" THEN RETURN Havlak.Create()
   ELSIF name = "DeltaBlue" THEN RETURN DeltaBlue.Create()
-  (*
   ELSIF name = "Json" THEN RETURN Json.Create()
   ELSIF name = "CD" THEN RETURN CD.Create()
-  *)
   ELSE Out.String("Benchmark not found: "); Out.String(name); Out.Ln; (*HALT(100);*)
   END;
   RETURN NIL;
@@ -152,7 +150,7 @@ BEGIN
     DoRun("Richards", 1, 1);
     DoRun("Json", 1, 1);
     DoRun("Havlak", 1, 1 );
-    DoRun("CD", 1, 1);
+    DoRun("CD", 1, 2);
     DoRun("Bounce", 1, 1);
     DoRun("List", 1, 1);
     DoRun("Mandelbrot", 1, 1);
