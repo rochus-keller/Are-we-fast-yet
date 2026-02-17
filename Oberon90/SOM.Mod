@@ -76,8 +76,10 @@ TYPE
 
   HashProc* = PROCEDURE (obj: Object): INT32;
 
+  Buckets = POINTER TO ARRAY OF Entry;
+  
   DictionaryDesc* = RECORD (ObjectDesc)
-    buckets: POINTER TO ARRAY OF Entry;
+    buckets: Buckets;
     size*: INT32;
     hashFunc: HashProc;
   END;
@@ -386,7 +388,7 @@ END DictionaryBucketIdx;
 
 PROCEDURE DictionaryResize(d: Dictionary);
   VAR newCap, i, idx: INT32;
-      newBuckets: POINTER TO ARRAY OF Entry;
+      newBuckets: Buckets;
       e, next: Entry;
 BEGIN
   newCap := LEN(d.buckets^) * 2;

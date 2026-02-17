@@ -40,11 +40,13 @@ TYPE
   JsonValue = POINTER TO JsonValueDesc;
   JsonValueDesc = RECORD (SOM.ObjectDesc) END;
 
+  HashTable = POINTER TO ARRAY OF INT32;
+  
   JsonObject = POINTER TO JsonObjectDesc;
   JsonObjectDesc = RECORD (JsonValueDesc)
     names: SOM.Vector;
     values: SOM.Vector;
-    hashTable: POINTER TO ARRAY OF INT32;
+    hashTable: HashTable;
     hashLen: INT32;
   END;
 
@@ -281,7 +283,7 @@ BEGIN
   RETURN h
 END HashSlotFor;
 
-PROCEDURE HashTableAdd(hashTable: POINTER TO ARRAY OF INT32; hashLen: INT32; name: Chars; index: INT32);
+PROCEDURE HashTableAdd(hashTable: HashTable; hashLen: INT32; name: Chars; index: INT32);
   VAR slot: INT32;
 BEGIN
   slot := HashSlotFor(hashLen, name);
@@ -292,7 +294,7 @@ BEGIN
   END;
 END HashTableAdd;
 
-PROCEDURE HashTableGet(hashTable: POINTER TO ARRAY OF INT32; hashLen: INT32; name: Chars): INT32;
+PROCEDURE HashTableGet(hashTable: HashTable; hashLen: INT32; name: Chars): INT32;
   VAR slot: INT32;
 BEGIN
   slot := HashSlotFor(hashLen, name);
