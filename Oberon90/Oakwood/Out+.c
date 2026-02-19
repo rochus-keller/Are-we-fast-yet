@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "Out.h"
 
-void Out$Int(long i, short n)
+void Out$Int(int i, short n)
 {
     printf("%ld", i);
 }
