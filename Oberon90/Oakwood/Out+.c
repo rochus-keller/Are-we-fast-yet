@@ -24,9 +24,9 @@ void Out$Ln()
     fflush(stdout);
 }
 
-void Out$Char(char ch)
+void Out$Char(uint8_t ch)
 {
-    printf("%c", ch);
+    printf("%c", (char)ch);
 }
 
 void Out$String(MIC$AP str)
