@@ -1,0 +1,1264 @@
+(*
+ * Copyright (c) 2001-2016 Stefan Marr
+ * Copyright (c) 2026 Rochus Keller <me@rochus-keller.ch> (for Micron migration)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the 'Software'), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *)
+
+// TODO: returns ERROR
+
+module CD
+
+import B := Benchmark
+import Math := Math
+
+type
+    Vector2D = record
+        x, y: real
+    end
+
+    Vector3D = record
+        x, y, z: real
+    end
+
+    CallSign = record
+        value: integer
+    end
+
+    Aircraft = record
+        callsign: CallSign
+        position: Vector3D
+    end
+
+    Collision = record
+        aircraftA: CallSign
+        aircraftB: CallSign
+        position: Vector3D
+    end
+
+    Motion = record
+        callsign: CallSign
+        posOne: Vector3D
+        posTwo: Vector3D
+    end
+
+    RBNodeCSV3D = record
+        key: CallSign
+        value: Vector3D
+        left, right, parent: ^RBNodeCSV3D
+        color: integer
+    end
+
+    TreeCSV3D = record
+        root: ^RBNodeCSV3D
+    end
+
+    RBNodeV2Bool = record
+        key: Vector2D
+        value: boolean
+        left, right, parent: ^RBNodeV2Bool
+        color: integer
+    end
+
+    TreeV2Bool = record
+        root: ^RBNodeV2Bool
+    end
+
+    MotionArr = record
+        data: ^array of Motion
+        size, cap: integer
+    end
+
+    MotionArrPtr = record
+        data: ^array of ^MotionArr
+        size, cap: integer
+    end
+
+    RBNodeV2Motions = record
+        key: Vector2D
+        value: ^MotionArr
+        left, right, parent: ^RBNodeV2Motions
+        color: integer
+    end
+
+    TreeV2Motions = record
+        root: ^RBNodeV2Motions
+    end
+
+    AircraftArr = record
+        data: ^array of Aircraft
+        size, cap: integer
+    end
+
+    CallSignArr = record
+        data: ^array of CallSign
+        size, cap: integer
+    end
+
+    CollisionArr = record
+        data: ^array of Collision
+        size, cap: integer
+    end
+
+    CollisionDetector = record
+        state: ^TreeCSV3D
+    end
+
+    Simulator = record
+        aircraft: ^CallSignArr
+    end
+
+const
+    RB_RED = 0
+    RB_BLACK = 1
+    MIN_X = 0.0
+    MIN_Y = 0.0
+    MAX_X = 1000.0
+    MAX_Y = 1000.0
+    MIN_Z = 0.0
+    MAX_Z = 10.0
+    PROXIMITY_RADIUS = 1.0
+    GOOD_VOXEL_SIZE = 2.0
+
+procedure MotionArr_create(): ^MotionArr
+var me: ^MotionArr
+begin
+    new(me)
+    me.data := nil
+    me.size := 0
+    me.cap := 0
+    return me
+end MotionArr_create
+
+procedure MotionArr_append(me: ^MotionArr; const m: ^Motion)
+var old: ^array of Motion; i: integer
+begin
+    if me.size >= me.cap then
+        if me.cap = 0 then me.cap := 4 else me.cap := me.cap * 2 end
+        old := me.data
+        new(me.data, me.cap)
+        if old # nil then
+            for i := 0 to me.size - 1 do me.data[i] := old[i] end
+            dispose(old)
+        end
+    end
+    me.data[me.size] := m^
+    inc(me.size)
+end MotionArr_append
+
+procedure MotionArr_free(me: ^MotionArr)
+begin
+    if me = nil then return end
+    if me.data # nil then dispose(me.data) end
+    dispose(me)
+end MotionArr_free
+
+procedure MotionArrPtr_init(me: ^MotionArrPtr)
+begin
+    me.data := nil
+    me.size := 0
+    me.cap := 0
+end MotionArrPtr_init
+
+procedure MotionArrPtr_append(me: ^MotionArrPtr; p: ^MotionArr)
+var old: ^array of ^MotionArr; i: integer
+begin
+    if me.size >= me.cap then
+        if me.cap = 0 then me.cap := 4 else me.cap := me.cap * 2 end
+        old := me.data
+        new(me.data, me.cap)
+        if old # nil then
+            for i := 0 to me.size - 1 do me.data[i] := old[i] end
+            dispose(old)
+        end
+    end
+    me.data[me.size] := p
+    inc(me.size)
+end MotionArrPtr_append
+
+procedure MotionArrPtr_free(me: ^MotionArrPtr)
+begin
+    if me.data # nil then dispose(me.data) end
+end MotionArrPtr_free
+
+procedure AircraftArr_init(me: ^AircraftArr)
+begin
+    me.data := nil
+    me.size := 0
+    me.cap := 0
+end AircraftArr_init
+
+procedure AircraftArr_append(me: ^AircraftArr; const a: ^Aircraft)
+var old: ^array of Aircraft; i: integer
+begin
+    if me.size >= me.cap then
+        if me.cap = 0 then me.cap := 4 else me.cap := me.cap * 2 end
+        old := me.data
+        new(me.data, me.cap)
+        if old # nil then
+            for i := 0 to me.size - 1 do me.data[i] := old[i] end
+            dispose(old)
+        end
+    end
+    me.data[me.size] := a^
+    inc(me.size)
+end AircraftArr_append
+
+procedure AircraftArr_free(me: ^AircraftArr)
+begin
+    if me.data # nil then dispose(me.data) end
+end AircraftArr_free
+
+procedure CallSignArr_create(): ^CallSignArr
+var me: ^CallSignArr
+begin
+    new(me)
+    me.data := nil
+    me.size := 0
+    me.cap := 0
+    return me
+end CallSignArr_create
+
+procedure CallSignArr_append(me: ^CallSignArr; const c: ^CallSign)
+var old: ^array of CallSign; i: integer
+begin
+    if me.size >= me.cap then
+        if me.cap = 0 then me.cap := 4 else me.cap := me.cap * 2 end
+        old := me.data
+        new(me.data, me.cap)
+        if old # nil then
+            for i := 0 to me.size - 1 do me.data[i] := old[i] end
+            dispose(old)
+        end
+    end
+    me.data[me.size] := c^
+    inc(me.size)
+end CallSignArr_append
+
+procedure CallSignArr_free(me: ^CallSignArr)
+begin
+    if me = nil then return end
+    if me.data # nil then dispose(me.data) end
+    dispose(me)
+end CallSignArr_free
+
+procedure CollisionArr_init(me: ^CollisionArr)
+begin
+    me.data := nil
+    me.size := 0
+    me.cap := 0
+end CollisionArr_init
+
+procedure CollisionArr_append(me: ^CollisionArr; const c: ^Collision)
+var old: ^array of Collision; i: integer
+begin
+    if me.size >= me.cap then
+        if me.cap = 0 then me.cap := 4 else me.cap := me.cap * 2 end
+        old := me.data
+        new(me.data, me.cap)
+        if old # nil then
+            for i := 0 to me.size - 1 do me.data[i] := old[i] end
+            dispose(old)
+        end
+    end
+    me.data[me.size] := c^
+    inc(me.size)
+end CollisionArr_append
+
+procedure CollisionArr_removeAll(me: ^CollisionArr)
+begin
+    me.size := 0
+end CollisionArr_removeAll
+
+procedure CollisionArr_free(me: ^CollisionArr)
+begin
+    if me.data # nil then dispose(me.data) end
+end CollisionArr_free
+
+procedure compareNumbers(a, b: real): integer
+begin
+    if a = b then return 0 end
+    if a < b then return -1 end
+    if a > b then return 1 end
+    if a = a then return 1 end
+    return -1
+end compareNumbers
+
+procedure Vector2D_compare(const lhs, rhs: ^Vector2D): integer
+var result: integer
+begin
+    result := compareNumbers(lhs.x, rhs.x)
+    if result # 0 then return result end
+    return compareNumbers(lhs.y, rhs.y)
+end Vector2D_compare
+
+procedure CallSign_compare(const lhs, rhs: ^CallSign): integer
+begin
+    if lhs.value = rhs.value then return 0 end
+    if lhs.value < rhs.value then return -1 end
+    return 1
+end CallSign_compare
+
+procedure V3D_plus(const a, b: ^Vector3D; res: ^Vector3D)
+begin
+    res.x := a.x + b.x
+    res.y := a.y + b.y
+    res.z := a.z + b.z
+end V3D_plus
+
+procedure V3D_minus(const a, b: ^Vector3D; res: ^Vector3D)
+begin
+    res.x := a.x - b.x
+    res.y := a.y - b.y
+    res.z := a.z - b.z
+end V3D_minus
+
+procedure V3D_dot(const a, b: ^Vector3D): real
+begin
+    return a.x * b.x + a.y * b.y + a.z * b.z
+end V3D_dot
+
+procedure V3D_squaredMag(const a: ^Vector3D): real
+begin
+    return V3D_dot(a, a)
+end V3D_squaredMag
+
+procedure V3D_magnitude(const a: ^Vector3D): real
+begin
+    return Math.sqrt(V3D_squaredMag(a))
+end V3D_magnitude
+
+procedure V3D_times(const a: ^Vector3D; amount: real; res: ^Vector3D)
+begin
+    res.x := a.x * amount
+    res.y := a.y * amount
+    res.z := a.z * amount
+end V3D_times
+
+procedure V2D_plus(const a, b: ^Vector2D; res: ^Vector2D)
+begin
+    res.x := a.x + b.x
+    res.y := a.y + b.y
+end V2D_plus
+
+procedure V2D_minus(const a, b: ^Vector2D; res: ^Vector2D)
+begin
+    res.x := a.x - b.x
+    res.y := a.y - b.y
+end V2D_minus
+
+procedure Motion_delta(const m: ^Motion; res: ^Vector3D)
+begin
+    V3D_minus(@m.posTwo, @m.posOne, res)
+end Motion_delta
+
+procedure Motion_findIntersection(me, other: ^Motion; result: ^Vector3D): boolean
+var init1, init2, vec1, vec2, tmp1, tmp2, r1, r2: Vector3D
+    radius, a, b, c, discr, v1, v2, v, dist: real
+begin
+    init1 := me.posOne
+    init2 := other.posOne
+    Motion_delta(me, @vec1)
+    Motion_delta(other, @vec2)
+    radius := PROXIMITY_RADIUS
+
+    V3D_minus(@vec2, @vec1, @tmp1)
+    a := V3D_squaredMag(@tmp1)
+
+    if a # 0.0 then
+        V3D_minus(@init1, @init2, @tmp1)
+        V3D_minus(@vec1, @vec2, @tmp2)
+        b := 2.0 * V3D_dot(@tmp1, @tmp2)
+
+        V3D_minus(@init2, @init1, @tmp1)
+        c := -radius * radius + V3D_squaredMag(@tmp1)
+
+        discr := b * b - 4.0 * a * c
+        if discr < 0.0 then return false end
+
+        v1 := (-b - Math.sqrt(discr)) / (2.0 * a)
+        v2 := (-b + Math.sqrt(discr)) / (2.0 * a)
+
+        if (v1 <= v2) and (((v1 <= 1.0) and (1.0 <= v2)) or ((v1 <= 0.0) and (0.0 <= v2)) or ((0.0 <= v1) and (v2 <= 1.0))) then
+            if v1 <= 0.0 then v := 0.0
+            else v := v1 end
+
+            V3D_times(@vec1, v, @tmp1)
+            V3D_plus(@init1, @tmp1, @r1)
+            V3D_times(@vec2, v, @tmp2)
+            V3D_plus(@init2, @tmp2, @r2)
+
+            V3D_plus(@r1, @r2, @tmp1)
+            V3D_times(@tmp1, 0.5, result)
+            if (result.x >= MIN_X) and (result.x <= MAX_X) and (result.y >= MIN_Y) and (result.y <= MAX_Y) and (result.z >= MIN_Z) and (result.z <= MAX_Z) then
+                return true
+            end
+        end
+        return false
+    end
+
+    V3D_minus(@init2, @init1, @tmp1)
+    dist := V3D_magnitude(@tmp1)
+    if dist <= radius then
+        V3D_plus(@init1, @init2, @tmp1)
+        V3D_times(@tmp1, 0.5, result)
+        return true
+    end
+    return false
+end Motion_findIntersection
+
+procedure TreeCSV3D_create(): ^TreeCSV3D
+var me: ^TreeCSV3D
+begin
+    new(me)
+    me.root := nil
+    return me
+end TreeCSV3D_create
+
+procedure TreeCSV3D_findNode(me: ^TreeCSV3D; const key: ^CallSign): ^RBNodeCSV3D
+var current: ^RBNodeCSV3D; cmp: integer
+begin
+    current := me.root
+    while current # nil do
+        cmp := CallSign_compare(key, @current.key)
+        if cmp = 0 then return current end
+        if cmp < 0 then current := current.left
+        else current := current.right end
+    end
+    return nil
+end TreeCSV3D_findNode
+
+procedure TreeCSV3D_leftRotate(me: ^TreeCSV3D; x: ^RBNodeCSV3D): ^RBNodeCSV3D
+var y: ^RBNodeCSV3D
+begin
+    y := x.right
+    x.right := y.left
+    if y.left # nil then y.left.parent := x end
+    y.parent := x.parent
+    if x.parent = nil then me.root := y
+    else
+        if x = x.parent.left then x.parent.left := y
+        else x.parent.right := y end
+    end
+    y.left := x
+    x.parent := y
+    return y
+end TreeCSV3D_leftRotate
+
+procedure TreeCSV3D_rightRotate(me: ^TreeCSV3D; y: ^RBNodeCSV3D): ^RBNodeCSV3D
+var x: ^RBNodeCSV3D
+begin
+    x := y.left
+    y.left := x.right
+    if x.right # nil then x.right.parent := y end
+    x.parent := y.parent
+    if y.parent = nil then me.root := x
+    else
+        if y = y.parent.left then y.parent.left := x
+        else y.parent.right := x end
+    end
+    x.right := y
+    y.parent := x
+    return x
+end TreeCSV3D_rightRotate
+
+procedure TreeCSV3D_removeFixup(me: ^TreeCSV3D; x_, xParent_: ^RBNodeCSV3D)
+var x, xParent, w: ^RBNodeCSV3D
+begin
+    x := x_; xParent := xParent_
+    while (x # me.root) and ((x = nil) or (x.color = RB_BLACK)) do
+        if x = xParent.left then
+            w := xParent.right
+            if w.color = RB_RED then
+                w.color := RB_BLACK; xParent.color := RB_RED
+                TreeCSV3D_leftRotate(me, xParent)
+                w := xParent.right
+            end
+            if ((w.left = nil) or (w.left.color = RB_BLACK)) and ((w.right = nil) or (w.right.color = RB_BLACK)) then
+                w.color := RB_RED; x := xParent; xParent := x.parent
+            else
+                if (w.right = nil) or (w.right.color = RB_BLACK) then
+                    w.left.color := RB_BLACK; w.color := RB_RED
+                    TreeCSV3D_rightRotate(me, w); w := xParent.right
+                end
+                w.color := xParent.color; xParent.color := RB_BLACK
+                if w.right # nil then w.right.color := RB_BLACK end
+                TreeCSV3D_leftRotate(me, xParent)
+                x := me.root; if x # nil then xParent := x.parent else xParent := nil end
+            end
+        else
+            w := xParent.left
+            if w.color = RB_RED then
+                w.color := RB_BLACK; xParent.color := RB_RED
+                TreeCSV3D_rightRotate(me, xParent)
+                w := xParent.left
+            end
+            if ((w.right = nil) or (w.right.color = RB_BLACK)) and ((w.left = nil) or (w.left.color = RB_BLACK)) then
+                w.color := RB_RED; x := xParent; xParent := x.parent
+            else
+                if (w.left = nil) or (w.left.color = RB_BLACK) then
+                    w.right.color := RB_BLACK; w.color := RB_RED
+                    TreeCSV3D_leftRotate(me, w); w := xParent.left
+                end
+                w.color := xParent.color; xParent.color := RB_BLACK
+                if w.left # nil then w.left.color := RB_BLACK end
+                TreeCSV3D_rightRotate(me, xParent)
+                x := me.root; if x # nil then xParent := x.parent else xParent := nil end
+            end
+        end
+    end
+    if x # nil then x.color := RB_BLACK end
+end TreeCSV3D_removeFixup
+
+procedure TreeCSV3D_put(me: ^TreeCSV3D; const key: ^CallSign; const value: ^Vector3D): ^Vector3D
+var y, x, z, uncle: ^RBNodeCSV3D; cmp: integer
+begin
+    y := nil; x := me.root
+    while x # nil do
+        y := x
+        cmp := CallSign_compare(key, @x.key)
+        if cmp < 0 then x := x.left
+        elsif cmp > 0 then x := x.right
+        else
+            x.value := value^
+            return @x.value
+        end
+    end
+    new(z)
+    z.key := key^; z.value := value^
+    z.left := nil; z.right := nil; z.parent := y; z.color := RB_RED
+    if y = nil then me.root := z
+    else
+        if CallSign_compare(key, @y.key) < 0 then y.left := z
+        else y.right := z end
+    end
+
+    x := z
+    while (x # me.root) and (x.parent.color = RB_RED) do
+        if x.parent = x.parent.parent.left then
+            uncle := x.parent.parent.right
+            if (uncle # nil) and (uncle.color = RB_RED) then
+                x.parent.color := RB_BLACK; uncle.color := RB_BLACK
+                x.parent.parent.color := RB_RED; x := x.parent.parent
+            else
+                if x = x.parent.right then x := x.parent; TreeCSV3D_leftRotate(me, x) end
+                x.parent.color := RB_BLACK; x.parent.parent.color := RB_RED
+                TreeCSV3D_rightRotate(me, x.parent.parent)
+            end
+        else
+            uncle := x.parent.parent.left
+            if (uncle # nil) and (uncle.color = RB_RED) then
+                x.parent.color := RB_BLACK; uncle.color := RB_BLACK
+                x.parent.parent.color := RB_RED; x := x.parent.parent
+            else
+                if x = x.parent.left then x := x.parent; TreeCSV3D_rightRotate(me, x) end
+                x.parent.color := RB_BLACK; x.parent.parent.color := RB_RED
+                TreeCSV3D_leftRotate(me, x.parent.parent)
+            end
+        end
+    end
+    me.root.color := RB_BLACK
+    return nil
+end TreeCSV3D_put
+
+procedure TreeCSV3D_get(me: ^TreeCSV3D; const key: ^CallSign): ^Vector3D
+var node: ^RBNodeCSV3D
+begin
+    node := TreeCSV3D_findNode(me, key)
+    if node = nil then return nil end
+    return @node.value
+end TreeCSV3D_get
+
+procedure TreeCSV3D_treeMin(x: ^RBNodeCSV3D): ^RBNodeCSV3D
+var c: ^RBNodeCSV3D
+begin
+    c := x
+    while c.left # nil do c := c.left end
+    return c
+end TreeCSV3D_treeMin
+
+procedure TreeCSV3D_successor(me: ^RBNodeCSV3D): ^RBNodeCSV3D
+var x, y: ^RBNodeCSV3D
+begin
+    x := me
+    if x.right # nil then return TreeCSV3D_treeMin(x.right) end
+    y := x.parent
+    while (y # nil) and (x = y.right) do x := y; y := y.parent end
+    return y
+end TreeCSV3D_successor
+
+procedure TreeCSV3D_remove(me: ^TreeCSV3D; const key: ^CallSign)
+var z, y, x, xParent: ^RBNodeCSV3D
+begin
+    z := TreeCSV3D_findNode(me, key)
+    if z = nil then return end
+    if (z.left = nil) or (z.right = nil) then y := z
+    else y := TreeCSV3D_successor(z) end
+    if y.left # nil then x := y.left else x := y.right end
+    if x # nil then x.parent := y.parent; xParent := x.parent
+    else xParent := y.parent end
+    if y.parent = nil then me.root := x
+    else
+        if y = y.parent.left then y.parent.left := x
+        else y.parent.right := x end
+    end
+    if y # z then
+        if y.color = RB_BLACK then TreeCSV3D_removeFixup(me, x, xParent) end
+        y.parent := z.parent; y.color := z.color; y.left := z.left; y.right := z.right
+        if z.left # nil then z.left.parent := y end
+        if z.right # nil then z.right.parent := y end
+        if z.parent # nil then
+            if z.parent.left = z then z.parent.left := y
+            else z.parent.right := y end
+        else me.root := y end
+    elsif y.color = RB_BLACK then
+        TreeCSV3D_removeFixup(me, x, xParent)
+    end
+    dispose(z)
+end TreeCSV3D_remove
+
+type ForEachCSV3DProc = procedure(const key: ^CallSign; const value: ^Vector3D; data: pointer to any)
+
+procedure TreeCSV3D_forEach(me: ^TreeCSV3D; iter: ForEachCSV3DProc; data: pointer to any)
+var current: ^RBNodeCSV3D
+begin
+    if me.root = nil then return end
+    current := TreeCSV3D_treeMin(me.root)
+    while current # nil do
+        iter(@current.key, @current.value, data)
+        current := TreeCSV3D_successor(current)
+    end
+end TreeCSV3D_forEach
+
+procedure TreeCSV3D_nodeDispose(n: ^RBNodeCSV3D)
+begin
+    if n = nil then return end
+    TreeCSV3D_nodeDispose(n.left)
+    TreeCSV3D_nodeDispose(n.right)
+    dispose(n)
+end TreeCSV3D_nodeDispose
+
+procedure TreeCSV3D_free(me: ^TreeCSV3D)
+begin
+    if me = nil then return end
+    TreeCSV3D_nodeDispose(me.root)
+    dispose(me)
+end TreeCSV3D_free
+
+
+procedure TreeV2Bool_create(): ^TreeV2Bool
+var me: ^TreeV2Bool
+begin
+    new(me)
+    me.root := nil
+    return me
+end TreeV2Bool_create
+
+procedure TreeV2Bool_leftRotate(me: ^TreeV2Bool; x: ^RBNodeV2Bool): ^RBNodeV2Bool
+var y: ^RBNodeV2Bool
+begin
+    y := x.right; x.right := y.left
+    if y.left # nil then y.left.parent := x end
+    y.parent := x.parent
+    if x.parent = nil then me.root := y
+    else
+        if x = x.parent.left then x.parent.left := y
+        else x.parent.right := y end
+    end
+    y.left := x; x.parent := y
+    return y
+end TreeV2Bool_leftRotate
+
+procedure TreeV2Bool_rightRotate(me: ^TreeV2Bool; y_: ^RBNodeV2Bool): ^RBNodeV2Bool
+var x: ^RBNodeV2Bool
+begin
+    x := y_.left; y_.left := x.right
+    if x.right # nil then x.right.parent := y_ end
+    x.parent := y_.parent
+    if y_.parent = nil then me.root := x
+    else
+        if y_ = y_.parent.left then y_.parent.left := x
+        else y_.parent.right := x end
+    end
+    x.right := y_; y_.parent := x
+    return x
+end TreeV2Bool_rightRotate
+
+procedure TreeV2Bool_put(me: ^TreeV2Bool; const key: ^Vector2D; val: boolean): boolean
+var y, x, z, uncle: ^RBNodeV2Bool; cmp: integer
+begin
+    y := nil; x := me.root
+    while x # nil do
+        y := x
+        cmp := Vector2D_compare(key, @x.key)
+        if cmp < 0 then x := x.left
+        elsif cmp > 0 then x := x.right
+        else
+            x.value := val
+            return true
+        end
+    end
+    new(z)
+    z.key := key^; z.value := val
+    z.left := nil; z.right := nil; z.parent := y; z.color := RB_RED
+    if y = nil then me.root := z
+    else
+        if Vector2D_compare(key, @y.key) < 0 then y.left := z
+        else y.right := z end
+    end
+    x := z
+    while (x # me.root) and (x.parent.color = RB_RED) do
+        if x.parent = x.parent.parent.left then
+            uncle := x.parent.parent.right
+            if (uncle # nil) and (uncle.color = RB_RED) then
+                x.parent.color := RB_BLACK; uncle.color := RB_BLACK
+                x.parent.parent.color := RB_RED; x := x.parent.parent
+            else
+                if x = x.parent.right then x := x.parent; TreeV2Bool_leftRotate(me, x) end
+                x.parent.color := RB_BLACK; x.parent.parent.color := RB_RED
+                TreeV2Bool_rightRotate(me, x.parent.parent)
+            end
+        else
+            uncle := x.parent.parent.left
+            if (uncle # nil) and (uncle.color = RB_RED) then
+                x.parent.color := RB_BLACK; uncle.color := RB_BLACK
+                x.parent.parent.color := RB_RED; x := x.parent.parent
+            else
+                if x = x.parent.left then x := x.parent; TreeV2Bool_rightRotate(me, x) end
+                x.parent.color := RB_BLACK; x.parent.parent.color := RB_RED
+                TreeV2Bool_leftRotate(me, x.parent.parent)
+            end
+        end
+    end
+    me.root.color := RB_BLACK
+    return false
+end TreeV2Bool_put
+
+procedure TreeV2Bool_get(me: ^TreeV2Bool; const key: ^Vector2D): boolean
+var current: ^RBNodeV2Bool; cmp: integer
+begin
+    current := me.root
+    while current # nil do
+        cmp := Vector2D_compare(key, @current.key)
+        if cmp = 0 then return current.value end
+        if cmp < 0 then current := current.left
+        else current := current.right end
+    end
+    return false
+end TreeV2Bool_get
+
+procedure TreeV2Bool_contains(me: ^TreeV2Bool; const key: ^Vector2D): boolean
+var current: ^RBNodeV2Bool; cmp: integer
+begin
+    current := me.root
+    while current # nil do
+        cmp := Vector2D_compare(key, @current.key)
+        if cmp = 0 then return true end
+        if cmp < 0 then current := current.left
+        else current := current.right end
+    end
+    return false
+end TreeV2Bool_contains
+
+procedure TreeV2Bool_nodeDispose(n: ^RBNodeV2Bool)
+begin
+    if n = nil then return end
+    TreeV2Bool_nodeDispose(n.left)
+    TreeV2Bool_nodeDispose(n.right)
+    dispose(n)
+end TreeV2Bool_nodeDispose
+
+procedure TreeV2Bool_free(me: ^TreeV2Bool)
+begin
+    if me = nil then return end
+    TreeV2Bool_nodeDispose(me.root)
+    dispose(me)
+end TreeV2Bool_free
+
+
+procedure TreeV2Motions_create(): ^TreeV2Motions
+var me: ^TreeV2Motions
+begin
+    new(me)
+    me.root := nil
+    return me
+end TreeV2Motions_create
+
+procedure TreeV2Motions_leftRotate(me: ^TreeV2Motions; x: ^RBNodeV2Motions): ^RBNodeV2Motions
+var y: ^RBNodeV2Motions
+begin
+    y := x.right; x.right := y.left
+    if y.left # nil then y.left.parent := x end
+    y.parent := x.parent
+    if x.parent = nil then me.root := y
+    else
+        if x = x.parent.left then x.parent.left := y
+        else x.parent.right := y end
+    end
+    y.left := x; x.parent := y
+    return y
+end TreeV2Motions_leftRotate
+
+procedure TreeV2Motions_rightRotate(me: ^TreeV2Motions; y_: ^RBNodeV2Motions): ^RBNodeV2Motions
+var x: ^RBNodeV2Motions
+begin
+    x := y_.left; y_.left := x.right
+    if x.right # nil then x.right.parent := y_ end
+    x.parent := y_.parent
+    if y_.parent = nil then me.root := x
+    else
+        if y_ = y_.parent.left then y_.parent.left := x
+        else y_.parent.right := x end
+    end
+    x.right := y_; y_.parent := x
+    return x
+end TreeV2Motions_rightRotate
+
+procedure TreeV2Motions_put(me: ^TreeV2Motions; const key: ^Vector2D; val: ^MotionArr): ^MotionArr
+var y, x, z, uncle: ^RBNodeV2Motions; cmp: integer; old: ^MotionArr
+begin
+    y := nil; x := me.root
+    while x # nil do
+        y := x
+        cmp := Vector2D_compare(key, @x.key)
+        if cmp < 0 then x := x.left
+        elsif cmp > 0 then x := x.right
+        else
+            old := x.value
+            x.value := val
+            return old
+        end
+    end
+    new(z)
+    z.key := key^; z.value := val
+    z.left := nil; z.right := nil; z.parent := y; z.color := RB_RED
+    if y = nil then me.root := z
+    else
+        if Vector2D_compare(key, @y.key) < 0 then y.left := z
+        else y.right := z end
+    end
+    x := z
+    while (x # me.root) and (x.parent.color = RB_RED) do
+        if x.parent = x.parent.parent.left then
+            uncle := x.parent.parent.right
+            if (uncle # nil) and (uncle.color = RB_RED) then
+                x.parent.color := RB_BLACK; uncle.color := RB_BLACK
+                x.parent.parent.color := RB_RED; x := x.parent.parent
+            else
+                if x = x.parent.right then x := x.parent; TreeV2Motions_leftRotate(me, x) end
+                x.parent.color := RB_BLACK; x.parent.parent.color := RB_RED
+                TreeV2Motions_rightRotate(me, x.parent.parent)
+            end
+        else
+            uncle := x.parent.parent.left
+            if (uncle # nil) and (uncle.color = RB_RED) then
+                x.parent.color := RB_BLACK; uncle.color := RB_BLACK
+                x.parent.parent.color := RB_RED; x := x.parent.parent
+            else
+                if x = x.parent.left then x := x.parent; TreeV2Motions_rightRotate(me, x) end
+                x.parent.color := RB_BLACK; x.parent.parent.color := RB_RED
+                TreeV2Motions_leftRotate(me, x.parent.parent)
+            end
+        end
+    end
+    me.root.color := RB_BLACK
+    return nil
+end TreeV2Motions_put
+
+procedure TreeV2Motions_get(me: ^TreeV2Motions; const key: ^Vector2D): ^MotionArr
+var current: ^RBNodeV2Motions; cmp: integer
+begin
+    current := me.root
+    while current # nil do
+        cmp := Vector2D_compare(key, @current.key)
+        if cmp = 0 then return current.value end
+        if cmp < 0 then current := current.left
+        else current := current.right end
+    end
+    return nil
+end TreeV2Motions_get
+
+procedure TreeV2Motions_treeMin(x: ^RBNodeV2Motions): ^RBNodeV2Motions
+var c: ^RBNodeV2Motions
+begin
+    c := x
+    while c.left # nil do c := c.left end
+    return c
+end TreeV2Motions_treeMin
+
+procedure TreeV2Motions_successor(n: ^RBNodeV2Motions): ^RBNodeV2Motions
+var x, y: ^RBNodeV2Motions
+begin
+    x := n
+    if x.right # nil then return TreeV2Motions_treeMin(x.right) end
+    y := x.parent
+    while (y # nil) and (x = y.right) do x := y; y := y.parent end
+    return y
+end TreeV2Motions_successor
+
+type ForEachV2MotionsProc = procedure(const key: ^Vector2D; value: ^MotionArr; data: pointer to any)
+
+procedure TreeV2Motions_forEach(me: ^TreeV2Motions; iter: ForEachV2MotionsProc; data: pointer to any)
+var current: ^RBNodeV2Motions
+begin
+    if me.root = nil then return end
+    current := TreeV2Motions_treeMin(me.root)
+    while current # nil do
+        iter(@current.key, current.value, data)
+        current := TreeV2Motions_successor(current)
+    end
+end TreeV2Motions_forEach
+
+procedure TreeV2Motions_nodeDispose(n: ^RBNodeV2Motions)
+begin
+    if n = nil then return end
+    TreeV2Motions_nodeDispose(n.left)
+    TreeV2Motions_nodeDispose(n.right)
+    dispose(n)
+end TreeV2Motions_nodeDispose
+
+procedure TreeV2Motions_free(me: ^TreeV2Motions)
+begin
+    if me = nil then return end
+    TreeV2Motions_nodeDispose(me.root)
+    dispose(me)
+end TreeV2Motions_free
+
+procedure CollisionDetector_voxelHash(const position: ^Vector3D; res: ^Vector2D)
+var xDiv, yDiv: integer
+begin
+    xDiv := floor(position.x / GOOD_VOXEL_SIZE)
+    yDiv := floor(position.y / GOOD_VOXEL_SIZE)
+    res.x := GOOD_VOXEL_SIZE * flt(xDiv)
+    res.y := GOOD_VOXEL_SIZE * flt(yDiv)
+    if position.x < 0.0 then res.x := res.x - GOOD_VOXEL_SIZE end
+    if position.y < 0.0 then res.y := res.y - GOOD_VOXEL_SIZE end
+end CollisionDetector_voxelHash
+
+procedure isInVoxel(const voxel: ^Vector2D; const motion: ^Motion): boolean
+var init_, fin_: Vector3D
+    v_s, r, v_x, x0, xv, v_y, y0, yv, low_x, high_x, low_y, high_y, tmp: real
+    xOk, yOk, xyOk: boolean
+begin
+    if (voxel.x > MAX_X) or (voxel.x < MIN_X) or (voxel.y > MAX_Y) or (voxel.y < MIN_Y) then
+        return false
+    end
+    init_ := motion.posOne
+    fin_ := motion.posTwo
+    v_s := GOOD_VOXEL_SIZE
+    r := PROXIMITY_RADIUS / 2.0
+    v_x := voxel.x; x0 := init_.x; xv := fin_.x - init_.x
+    v_y := voxel.y; y0 := init_.y; yv := fin_.y - init_.y
+
+    low_x := (v_x - r - x0) / xv
+    high_x := (v_x + v_s + r - x0) / xv
+    if xv < 0.0 then tmp := low_x; low_x := high_x; high_x := tmp end
+
+    low_y := (v_y - r - y0) / yv
+    high_y := (v_y + v_s + r - y0) / yv
+    if yv < 0.0 then tmp := low_y; low_y := high_y; high_y := tmp end
+
+    xOk := ((xv = 0.0) and (v_x <= x0 + r) and (x0 - r <= v_x + v_s)) or ((low_x <= 1.0) and (1.0 <= high_x)) or ((low_x <= 0.0) and (0.0 <= high_x)) or ((0.0 <= low_x) and (high_x <= 1.0))
+    yOk := ((yv = 0.0) and (v_y <= y0 + r) and (y0 - r <= v_y + v_s)) or ((low_y <= 1.0) and (1.0 <= high_y)) or ((low_y <= 0.0) and (0.0 <= high_y)) or ((0.0 <= low_y) and (high_y <= 1.0))
+    xyOk := (xv = 0.0) or (yv = 0.0) or ((low_y <= high_x) and (high_x <= high_y)) or ((low_y <= low_x) and (low_x <= high_y)) or ((low_x <= low_y) and (high_y <= high_x))
+
+    return xOk and yOk and xyOk
+end isInVoxel
+
+procedure putIntoMap(voxelMap: ^TreeV2Motions; const voxel: ^Vector2D; const motion: ^Motion)
+var existing: ^MotionArr; a: ^MotionArr
+begin
+    existing := TreeV2Motions_get(voxelMap, voxel)
+    if existing = nil then
+        a := MotionArr_create()
+        MotionArr_append(a, motion)
+        TreeV2Motions_put(voxelMap, voxel, a)
+    else
+        MotionArr_append(existing, motion)
+    end
+end putIntoMap
+
+procedure^ recurse(voxelMap: ^TreeV2Motions; seen: ^TreeV2Bool; const nextVoxel: ^Vector2D; const motion: ^Motion)
+
+procedure recurse(voxelMap: ^TreeV2Motions; seen: ^TreeV2Bool; const nextVoxel: ^Vector2D; const motion: ^Motion)
+var wasPresent: boolean; v: Vector2D
+begin
+    if not isInVoxel(nextVoxel, motion) then return end
+    if TreeV2Bool_contains(seen, nextVoxel) then
+        if TreeV2Bool_get(seen, nextVoxel) then return end
+    end
+    TreeV2Bool_put(seen, nextVoxel, true)
+    putIntoMap(voxelMap, nextVoxel, motion)
+
+    v.x := nextVoxel.x - GOOD_VOXEL_SIZE; v.y := nextVoxel.y
+    recurse(voxelMap, seen, @v, motion)
+    v.x := nextVoxel.x + GOOD_VOXEL_SIZE; v.y := nextVoxel.y
+    recurse(voxelMap, seen, @v, motion)
+    v.x := nextVoxel.x; v.y := nextVoxel.y - GOOD_VOXEL_SIZE
+    recurse(voxelMap, seen, @v, motion)
+    v.x := nextVoxel.x; v.y := nextVoxel.y + GOOD_VOXEL_SIZE
+    recurse(voxelMap, seen, @v, motion)
+    v.x := nextVoxel.x - GOOD_VOXEL_SIZE; v.y := nextVoxel.y - GOOD_VOXEL_SIZE
+    recurse(voxelMap, seen, @v, motion)
+    v.x := nextVoxel.x - GOOD_VOXEL_SIZE; v.y := nextVoxel.y + GOOD_VOXEL_SIZE
+    recurse(voxelMap, seen, @v, motion)
+    v.x := nextVoxel.x + GOOD_VOXEL_SIZE; v.y := nextVoxel.y - GOOD_VOXEL_SIZE
+    recurse(voxelMap, seen, @v, motion)
+    v.x := nextVoxel.x + GOOD_VOXEL_SIZE; v.y := nextVoxel.y + GOOD_VOXEL_SIZE
+    recurse(voxelMap, seen, @v, motion)
+end recurse
+
+procedure drawMotionOnVoxelMap(voxelMap: ^TreeV2Motions; const motion: ^Motion)
+var seen: ^TreeV2Bool; voxel: Vector2D
+begin
+    seen := TreeV2Bool_create()
+    CollisionDetector_voxelHash(@motion.posOne, @voxel)
+    recurse(voxelMap, seen, @voxel, motion)
+    TreeV2Bool_free(seen)
+end drawMotionOnVoxelMap
+
+procedure reduceCollisionSet_iter(const key: ^Vector2D; value: ^MotionArr; data: pointer to any)
+var result: ^MotionArrPtr
+begin
+    result := data(MotionArrPtr)
+    if value.size > 1 then
+        MotionArrPtr_append(result, value)
+    else
+        MotionArr_free(value)
+    end
+end reduceCollisionSet_iter
+
+procedure reduceCollisionSet(motions: ^MotionArr; result: ^MotionArrPtr)
+var voxelMap: ^TreeV2Motions; i: integer
+begin
+    voxelMap := TreeV2Motions_create()
+
+    for i := 0 to result.size - 1 do
+        result.data[i].size := 0
+    end
+    result.size := 0
+
+    for i := 0 to motions.size - 1 do
+        drawMotionOnVoxelMap(voxelMap, @motions.data[i])
+    end
+
+    TreeV2Motions_forEach(voxelMap, reduceCollisionSet_iter, result)
+    TreeV2Motions_nodeDispose(voxelMap.root)
+    dispose(voxelMap)
+end reduceCollisionSet
+
+procedure findRemovableIterCB(const key: ^CallSign; const value: ^Vector3D; data: pointer to any)
+type IterData = record
+    seen: ^TreeCSV3D
+    toRemove: ^CallSignArr
+end
+var d: ^IterData
+begin
+    d := data(IterData)
+    if TreeCSV3D_get(d.seen, key) = nil then
+        CallSignArr_append(d.toRemove, key)
+    end
+end findRemovableIterCB
+
+procedure CollisionDetector_findRemovableIter(state, seen: ^TreeCSV3D; toRemove: ^CallSignArr)
+type IterData = record
+    seen: ^TreeCSV3D
+    toRemove: ^CallSignArr
+end
+var d: IterData
+begin
+    d.seen := seen
+    d.toRemove := toRemove
+    TreeCSV3D_forEach(state, findRemovableIterCB, @d)
+end CollisionDetector_findRemovableIter
+
+procedure CollisionDetector_findRemovable(state: ^TreeCSV3D; frame: ^AircraftArr; toRemove: ^CallSignArr)
+var seen: ^TreeCSV3D; i: integer; t: Vector3D
+begin
+    seen := TreeCSV3D_create()
+    t.x := 0.0; t.y := 0.0; t.z := 0.0
+    for i := 0 to frame.size - 1 do
+        TreeCSV3D_put(seen, @frame.data[i].callsign, @t)
+    end
+    CollisionDetector_findRemovableIter(state, seen, toRemove)
+    TreeCSV3D_free(seen)
+end CollisionDetector_findRemovable
+
+procedure CollisionDetector_handleNewFrame(me: ^CollisionDetector; frame: ^AircraftArr; collisions: ^CollisionArr)
+var motions: ^MotionArr; i, j, k: integer
+    oldPos: ^Vector3D; newPos: Vector3D; m: Motion
+    toRemove: ^CallSignArr
+    allReduced: MotionArrPtr; reduced: ^MotionArr
+    collision: Vector3D; coll: Collision; hit: boolean
+
+    type ForEachData = record
+        seen: ^TreeCSV3D
+        toRemove: ^CallSignArr
+    end
+
+    var feData: ForEachData
+begin
+    motions := MotionArr_create()
+
+    for i := 0 to frame.size - 1 do
+        oldPos := TreeCSV3D_put(me.state, @frame.data[i].callsign, @frame.data[i].position)
+        newPos := frame.data[i].position
+        if oldPos = nil then
+            m.callsign := frame.data[i].callsign
+            m.posOne := newPos; m.posTwo := newPos
+        else
+            m.callsign := frame.data[i].callsign
+            m.posOne := oldPos^; m.posTwo := newPos
+        end
+        MotionArr_append(motions, @m)
+    end
+
+    toRemove := CallSignArr_create()
+
+    CollisionDetector_findRemovable(me.state, frame, toRemove)
+
+    for i := 0 to toRemove.size - 1 do
+        TreeCSV3D_remove(me.state, @toRemove.data[i])
+    end
+    CallSignArr_free(toRemove)
+
+    MotionArrPtr_init(@allReduced)
+    reduceCollisionSet(motions, @allReduced)
+
+    CollisionArr_removeAll(collisions)
+
+    for k := 0 to allReduced.size - 1 do
+        reduced := allReduced.data[k]
+        for i := 0 to reduced.size - 1 do
+            for j := i + 1 to reduced.size - 1 do
+                collision.x := 0.0; collision.y := 0.0; collision.z := 0.0
+                hit := Motion_findIntersection(@reduced.data[i], @reduced.data[j], @collision)
+                if hit then
+                    coll.aircraftA := reduced.data[i].callsign
+                    coll.aircraftB := reduced.data[j].callsign
+                    coll.position := collision
+                    CollisionArr_append(collisions, @coll)
+                end
+            end
+        end
+    end
+
+    MotionArr_free(motions)
+    for i := 0 to allReduced.size - 1 do
+        MotionArr_free(allReduced.data[i])
+    end
+    MotionArrPtr_free(@allReduced)
+end CollisionDetector_handleNewFrame
+
+procedure Simulator_init(me: ^Simulator; numAircraft: integer)
+var i: integer; cs: CallSign
+begin
+    me.aircraft := CallSignArr_create()
+    for i := 0 to numAircraft - 1 do
+        cs.value := i
+        CallSignArr_append(me.aircraft, @cs)
+    end
+end Simulator_init
+
+procedure simulate(me: ^Simulator; frame: ^AircraftArr; time: real)
+var i: integer; a: Aircraft
+begin
+    i := 0
+    while i < me.aircraft.size do
+        a.callsign := me.aircraft.data[i]
+        a.position.x := time
+        a.position.y := Math.cos(time) * 2.0 + flt(i) * 3.0
+        a.position.z := 10.0
+        AircraftArr_append(frame, @a)
+        a.callsign := me.aircraft.data[i + 1]
+        a.position.x := time
+        a.position.y := Math.sin(time) * 2.0 + flt(i) * 3.0
+        a.position.z := 10.0
+        AircraftArr_append(frame, @a)
+        i := i + 2
+    end
+end simulate
+
+procedure benchmark2(numAircrafts: integer): integer
+var numFrames, i, actualCollisions: integer
+    simulator: Simulator; detector: CollisionDetector
+    time: real; frame: AircraftArr; collisions: CollisionArr
+begin
+    numFrames := 200
+    Simulator_init(@simulator, numAircrafts)
+    detector.state := TreeCSV3D_create()
+    actualCollisions := 0
+
+    for i := 0 to numFrames - 1 do
+        time := flt(i) / 10.0
+        AircraftArr_init(@frame)
+        simulate(@simulator, @frame, time)
+        CollisionArr_init(@collisions)
+        CollisionDetector_handleNewFrame(@detector, @frame, @collisions)
+        actualCollisions := actualCollisions + collisions.size
+        AircraftArr_free(@frame)
+        CollisionArr_free(@collisions)
+    end
+
+    TreeCSV3D_free(detector.state)
+    CallSignArr_free(simulator.aircraft)
+    return actualCollisions
+end benchmark2
+
+procedure verifyResult2(actualCollisions, numAircrafts: integer): boolean
+begin
+    if numAircrafts = 1000 then return actualCollisions = 14484 end
+    if numAircrafts = 500 then return actualCollisions = 14484 end
+    if numAircrafts = 250 then return actualCollisions = 10830 end
+    if numAircrafts = 200 then return actualCollisions = 8655 end
+    if numAircrafts = 100 then return actualCollisions = 4305 end
+    if numAircrafts = 10 then return actualCollisions = 390 end
+    if numAircrafts = 2 then return (actualCollisions = 42) or (actualCollisions = 40) end
+    return false
+end verifyResult2
+
+procedure innerBenchmarkLoop(me: ^B.Benchmark; innerIterations: integer): boolean
+begin
+    return verifyResult2(benchmark2(innerIterations), innerIterations)
+end innerBenchmarkLoop
+
+procedure benchmarkFn(me: ^B.Benchmark): integer
+begin
+    assert(false)
+    return 0
+end benchmarkFn
+
+procedure verifyResultFn(me: ^B.Benchmark; result: integer): boolean
+begin
+    assert(false)
+    return false
+end verifyResultFn
+
+procedure create*(): ^B.Benchmark
+var bench: ^B.Benchmark
+begin
+    new(bench)
+    bench.benchmark := benchmarkFn
+    bench.verifyResult := verifyResultFn
+    bench.dispose := nil
+    bench.innerBenchmarkLoop := innerBenchmarkLoop
+    return bench
+end create
+
+end CD

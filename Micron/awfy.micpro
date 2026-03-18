@@ -17,7 +17,9 @@ size=0
 2\RelPath=som/Interfaces.mic
 3\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/som/Vector.mic
 3\RelPath=som/Vector.mic
-size=3
+4\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/som/RedBlackTree.mic
+4\RelPath=som/RedBlackTree.mic
+size=4
 
 [Modules]
 1\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/Benchmark.mic
@@ -32,8 +34,14 @@ size=3
 13\RelPath=Storage.mic
 14\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/Towers.mic
 14\RelPath=Towers.mic
-15\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/Json.mic
-15\RelPath=Json.mic
+15\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/Havlak.mic
+15\RelPath=Havlak.mic
+16\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/Json.mic
+16\RelPath=Json.mic
+17\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/DeltaBlue.mic
+17\RelPath=DeltaBlue.mic
+18\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/CD.mic
+18\RelPath=CD.mic
 2\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/Bounce.mic
 2\RelPath=Bounce.mic
 3\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/List.mic
@@ -50,7 +58,7 @@ size=3
 8\RelPath=Permute.mic
 9\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/Queens.mic
 9\RelPath=Queens.mic
-size=14
+size=18
 
 [Packages]
 1\Name=@ByteArray()

@@ -1,0 +1,423 @@
+(* This code is derived from the SOM benchmarks, see AUTHORS.md file.
+ *
+ * Copyright (c) 2026 Rochus Keller <me@rochus-keller.ch> (for Micron migration)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the 'Software'), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *)
+
+ module RedBlackTree(K, V) 
+
+const
+    RED = 0
+    BLACK = 1
+
+type
+    Compare* = proc(const lhs, rhs: ^K): integer
+    KeyValueIterator* = proc(const key: ^K; const value: ^V; data: pointer to any)
+
+    Node = pointer to NodeDesc
+    NodeDesc = record
+        key: K
+        value: V
+        left: Node
+        right: Node
+        parent: Node
+        color: integer
+    end
+
+    Tree* = pointer to record
+        root: Node
+        compare: Compare
+        isNewEntry: boolean
+        newNode: Node
+        oldValue: ^V
+        hasOldValue: boolean
+        oldValueStore: V
+    end
+
+proc Node_create(const key: ^K; const value: ^V): Node
+var me: Node
+begin
+    new(me)
+    me.key := key^
+    me.value := value^
+    me.left := nil
+    me.right := nil
+    me.parent := nil
+    me.color := RED
+    return me
+end Node_create
+
+proc Node_dispose(me: Node)
+begin
+    if me = nil then return end
+    if me.left # nil then Node_dispose(me.left) end
+    if me.right # nil then Node_dispose(me.right) end
+    dispose(me)
+end Node_dispose
+
+proc Node_treeMinimum(x: Node): Node
+var current: Node
+begin
+    current := x
+    while current.left # nil do
+        current := current.left
+    end
+    return current
+end Node_treeMinimum
+
+proc Node_successor(me: Node): Node
+var x, y: Node
+begin
+    x := me
+    if x.right # nil then
+        return Node_treeMinimum(x.right)
+    end
+    y := x.parent
+    while (y # nil) and (x = y.right) do
+        x := y
+        y := y.parent
+    end
+    return y
+end Node_successor
+
+proc create*(cmp: Compare): Tree
+var me: Tree
+begin
+    new(me)
+    me.root := nil
+    me.compare := cmp
+    me.isNewEntry := false
+    me.newNode := nil
+    me.oldValue := nil
+    me.hasOldValue := false
+    return me
+end create
+
+proc free*(me: Tree)
+begin
+    if me = nil then return end
+    if me.root # nil then Node_dispose(me.root) end
+    dispose(me)
+end free
+
+proc findNode(me: Tree; const key: ^K): Node
+var current: Node; cmp: integer
+begin
+    current := me.root
+    while current # nil do
+        cmp := me.compare(@current.key, key)
+        if cmp = 0 then return current end
+        if cmp > 0 then
+            current := current.left
+        else
+            current := current.right
+        end
+    end
+    return nil
+end findNode
+
+proc treeInsert(me: Tree; const key: ^K; const value: ^V)
+var y, x: Node; cmp: integer; z: Node
+begin
+    y := nil
+    x := me.root
+
+    while x # nil do
+        y := x
+        cmp := me.compare(key, @x.key)
+        if cmp < 0 then
+            x := x.left
+        elsif cmp > 0 then
+            x := x.right
+        else
+            me.oldValueStore := x.value
+            me.oldValue := @me.oldValueStore
+            me.hasOldValue := true
+            x.value := value^
+            me.isNewEntry := false
+            me.newNode := nil
+            return
+        end
+    end
+
+    z := Node_create(key, value)
+    z.parent := y
+    if y = nil then
+        me.root := z
+    else
+        if me.compare(key, @y.key) < 0 then
+            y.left := z
+        else
+            y.right := z
+        end
+    end
+    me.isNewEntry := true
+    me.newNode := z
+    me.oldValue := nil
+    me.hasOldValue := false
+end treeInsert
+
+proc leftRotate(me: Tree; x: Node): Node
+var y: Node
+begin
+    y := x.right
+    x.right := y.left
+    if y.left # nil then
+        y.left.parent := x
+    end
+    y.parent := x.parent
+    if x.parent = nil then
+        me.root := y
+    else
+        if x = x.parent.left then
+            x.parent.left := y
+        else
+            x.parent.right := y
+        end
+    end
+    y.left := x
+    x.parent := y
+    return y
+end leftRotate
+
+proc rightRotate(me: Tree; y: Node): Node
+var x: Node
+begin
+    x := y.left
+    y.left := x.right
+    if x.right # nil then
+        x.right.parent := y
+    end
+    x.parent := y.parent
+    if y.parent = nil then
+        me.root := x
+    else
+        if y = y.parent.left then
+            y.parent.left := x
+        else
+            y.parent.right := x
+        end
+    end
+    x.right := y
+    y.parent := x
+    return x
+end rightRotate
+
+proc removeFixup(me: Tree; x_, xParent_: Node)
+var x, xParent, w: Node
+begin
+    x := x_
+    xParent := xParent_
+    while (x # me.root) and ((x = nil) or (x.color = BLACK)) do
+        if x = xParent.left then
+            w := xParent.right
+            if w.color = RED then
+                w.color := BLACK
+                xParent.color := RED
+                leftRotate(me, xParent)
+                w := xParent.right
+            end
+            if ((w.left = nil) or (w.left.color = BLACK)) and ((w.right = nil) or (w.right.color = BLACK)) then
+                w.color := RED
+                x := xParent
+                xParent := x.parent
+            else
+                if (w.right = nil) or (w.right.color = BLACK) then
+                    w.left.color := BLACK
+                    w.color := RED
+                    rightRotate(me, w)
+                    w := xParent.right
+                end
+                w.color := xParent.color
+                xParent.color := BLACK
+                if w.right # nil then
+                    w.right.color := BLACK
+                end
+                leftRotate(me, xParent)
+                x := me.root
+                xParent := x.parent
+            end
+        else
+            w := xParent.left
+            if w.color = RED then
+                w.color := BLACK
+                xParent.color := RED
+                rightRotate(me, xParent)
+                w := xParent.left
+            end
+            if ((w.right = nil) or (w.right.color = BLACK)) and ((w.left = nil) or (w.left.color = BLACK)) then
+                w.color := RED
+                x := xParent
+                xParent := x.parent
+            else
+                if (w.left = nil) or (w.left.color = BLACK) then
+                    w.right.color := BLACK
+                    w.color := RED
+                    leftRotate(me, w)
+                    w := xParent.left
+                end
+                w.color := xParent.color
+                xParent.color := BLACK
+                if w.left # nil then
+                    w.left.color := BLACK
+                end
+                rightRotate(me, xParent)
+                x := me.root
+                xParent := x.parent
+            end
+        end
+    end
+    if x # nil then
+        x.color := BLACK
+    end
+end removeFixup
+
+proc put*(me: Tree; const key: ^K; const value: ^V): ^V
+var x, y: Node
+begin
+    treeInsert(me, key, value)
+    if not me.isNewEntry then
+        return me.oldValue
+    end
+    x := me.newNode
+
+    while (x # me.root) and (x.parent.color = RED) do
+        if x.parent = x.parent.parent.left then
+            y := x.parent.parent.right
+            if (y # nil) and (y.color = RED) then
+                x.parent.color := BLACK
+                y.color := BLACK
+                x.parent.parent.color := RED
+                x := x.parent.parent
+            else
+                if x = x.parent.right then
+                    x := x.parent
+                    leftRotate(me, x)
+                end
+                x.parent.color := BLACK
+                x.parent.parent.color := RED
+                rightRotate(me, x.parent.parent)
+            end
+        else
+            y := x.parent.parent.left
+            if (y # nil) and (y.color = RED) then
+                x.parent.color := BLACK
+                y.color := BLACK
+                x.parent.parent.color := RED
+                x := x.parent.parent
+            else
+                if x = x.parent.left then
+                    x := x.parent
+                    rightRotate(me, x)
+                end
+                x.parent.color := BLACK
+                x.parent.parent.color := RED
+                leftRotate(me, x.parent.parent)
+            end
+        end
+    end
+
+    me.root.color := BLACK
+    return nil
+end put
+
+proc remove*(me: Tree; const key: ^K): ^V
+var z, y, x, xParent: Node
+begin
+    z := findNode(me, key)
+    if z = nil then return nil end
+
+    if (z.left = nil) or (z.right = nil) then
+        y := z
+    else
+        y := Node_successor(z)
+    end
+
+    if y.left # nil then
+        x := y.left
+    else
+        x := y.right
+    end
+
+    if x # nil then
+        x.parent := y.parent
+        xParent := x.parent
+    else
+        xParent := y.parent
+    end
+
+    if y.parent = nil then
+        me.root := x
+    else
+        if y = y.parent.left then
+            y.parent.left := x
+        else
+            y.parent.right := x
+        end
+    end
+
+    if y # z then
+        if y.color = BLACK then
+            removeFixup(me, x, xParent)
+        end
+        y.parent := z.parent
+        y.color := z.color
+        y.left := z.left
+        y.right := z.right
+        if z.left # nil then z.left.parent := y end
+        if z.right # nil then z.right.parent := y end
+        if z.parent # nil then
+            if z.parent.left = z then
+                z.parent.left := y
+            else
+                z.parent.right := y
+            end
+        else
+            me.root := y
+        end
+    elsif y.color = BLACK then
+        removeFixup(me, x, xParent)
+    end
+
+    me.oldValueStore := z.value
+    dispose(z)
+    return @me.oldValueStore
+end remove
+
+proc get*(me: Tree; const key: ^K): ^V
+var node: Node
+begin
+    node := findNode(me, key)
+    if node = nil then return nil end
+    return @node.value
+end get
+
+proc forEach*(me: Tree; iter: KeyValueIterator; data: pointer to any)
+var current: Node
+begin
+    if me.root = nil then return end
+    current := Node_treeMinimum(me.root)
+    while current # nil do
+        iter(@current.key, @current.value, data)
+        current := Node_successor(current)
+    end
+end forEach
+
+end RedBlackTree
