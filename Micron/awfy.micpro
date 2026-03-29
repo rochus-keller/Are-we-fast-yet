@@ -1,5 +1,5 @@
 [General]
-BuildDir=/home/me/Entwicklung/Modules/build-MicIde-Desktop-Debug
+BuildDir=/home/me/Entwicklung/Modules/build-MicIde-Desktop-Debug/build
 BuiltInOakwood=true
 MainModule=@ByteArray()
 MainProc=@ByteArray()

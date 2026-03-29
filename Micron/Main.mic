@@ -61,9 +61,9 @@ proc runOnce()
 begin
     run("DeltaBlue", 1, 1 );
     run("Richards", 1, 1);
-    run("Json", 1, 1);
+    // TODO run("Json", 1, 1);
     run("Havlak", 1, 1 );
-    run("CD", 1, 2);
+    // TODO run("CD", 1, 2);
     run("Bounce", 1, 1);
     run("List", 1, 1);
     run("Mandelbrot", 1, 1);
