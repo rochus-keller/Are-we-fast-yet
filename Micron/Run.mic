@@ -25,7 +25,7 @@ module Run
 
 import B := Benchmark, Input, Out, 
 			Bounce, Mandelbrot, Permute, List, Queens, Sieve, Storage, Towers
-			NBody, Richards, Havlak, Json, DeltaBlue, CD
+			NBody, Richards, Havlak, DeltaBlue
 
 type 
 	Run* = record
@@ -60,10 +60,11 @@ begin
         return Havlak.create()
     elsif name = "DeltaBlue" then
         return DeltaBlue.create()
-    elsif name = "CD" then
-        return CD.create()
+
     end
     (*
+    elsif name = "CD" then
+        return CD.create()
     elsif name = "Json" then
         return Json.create()    
     *)

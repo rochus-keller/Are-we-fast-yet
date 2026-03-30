@@ -36,8 +36,8 @@ size=4
 14\RelPath=Towers.mic
 15\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/Havlak.mic
 15\RelPath=Havlak.mic
-16\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/Json.mic
-16\RelPath=Json.mic
+16\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/DeltaBlue.mic
+16\RelPath=DeltaBlue.mic
 17\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/DeltaBlue.mic
 17\RelPath=DeltaBlue.mic
 18\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/CD.mic
@@ -58,7 +58,7 @@ size=4
 8\RelPath=Permute.mic
 9\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/Queens.mic
 9\RelPath=Queens.mic
-size=18
+size=16
 
 [Packages]
 1\Name=@ByteArray()

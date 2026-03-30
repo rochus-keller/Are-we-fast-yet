@@ -318,7 +318,7 @@ BEGIN
   IF existing = NIL THEN
     motions := SOM.CreateVector(0);
     SOM.VectorAppend(motions, motion);
-    RedBlackTree.Put(voxelMap, voxel, motions);
+    existing := RedBlackTree.Put(voxelMap, voxel, motions);
   ELSE
     SOM.VectorAppend(existing(SOM.Vector), motion);
   END;

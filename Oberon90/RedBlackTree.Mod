@@ -89,7 +89,7 @@ BEGIN
   RETURN NIL
 END FindNode;
 
-PROCEDURE LeftRotate(t: Tree; x: Node): Node;
+PROCEDURE LeftRotate(t: Tree; x: Node);
   VAR y: Node;
 BEGIN
   y := x.right;
@@ -102,10 +102,10 @@ BEGIN
   END;
   y.left := x;
   x.parent := y;
-  RETURN y
+  (* RETURN y *)
 END LeftRotate;
 
-PROCEDURE RightRotate(t: Tree; y: Node): Node;
+PROCEDURE RightRotate(t: Tree; y: Node);
   VAR x: Node;
 BEGIN
   x := y.left;
@@ -118,7 +118,7 @@ BEGIN
   END;
   x.right := y;
   y.parent := x;
-  RETURN x
+  (* RETURN x *)
 END RightRotate;
 
 PROCEDURE TreeInsert(t: Tree; key, value: SOM.Object; VAR isNew: BOOLEAN; VAR newNode: Node; VAR oldValue: SOM.Object);
