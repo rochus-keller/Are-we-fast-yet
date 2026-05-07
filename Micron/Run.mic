@@ -36,29 +36,29 @@ type
 
 proc getSuiteFromName*( const name : pointer to array of char ) : ^B.Benchmark
 begin
-	if name = "Bounce" then
+	if name^ = "Bounce" then
         return Bounce.create()
-    elsif name = "Mandelbrot" then
+    elsif name^ = "Mandelbrot" then
         return Mandelbrot.create()
-    elsif name = "Permute" then
+    elsif name^ = "Permute" then
         return Permute.create()
-    elsif name = "List" then
+    elsif name^ = "List" then
         return List.create()
-    elsif name = "Queens" then
+    elsif name^ = "Queens" then
         return Queens.create()
-    elsif name = "Sieve" then
+    elsif name^ = "Sieve" then
         return Sieve.create()
-    elsif name = "Storage" then
+    elsif name^ = "Storage" then
         return Storage.create()
-    elsif name = "Towers" then
+    elsif name^ = "Towers" then
         return Towers.create()
-    elsif name = "NBody" then
+    elsif name^ = "NBody" then
         return NBody.create()
-    elsif name = "Richards" then
+    elsif name^ = "Richards" then
         return Richards.create()
-    elsif name = "Havlak" then
+    elsif name^ = "Havlak" then
         return Havlak.create()
-    elsif name = "DeltaBlue" then
+    elsif name^ = "DeltaBlue" then
         return DeltaBlue.create()
 
     end
