@@ -1,4 +1,5 @@
 [General]
+Arguments=@ByteArray()
 BuildDir=/home/me/Entwicklung/Modules/build-MicIde-Desktop-Debug/build
 BuiltInOakwood=true
 MainModule=@ByteArray()
@@ -38,10 +39,10 @@ size=4
 15\RelPath=Havlak.mic
 16\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/DeltaBlue.mic
 16\RelPath=DeltaBlue.mic
-17\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/DeltaBlue.mic
-17\RelPath=DeltaBlue.mic
-18\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/CD.mic
-18\RelPath=CD.mic
+17\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/CD.mic
+17\RelPath=CD.mic
+18\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/Json.mic
+18\RelPath=Json.mic
 2\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/Bounce.mic
 2\RelPath=Bounce.mic
 3\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/List.mic
@@ -58,7 +59,7 @@ size=4
 8\RelPath=Permute.mic
 9\AbsPath=/home/me/Entwicklung/Modules/Are-we-fast-yet/Micron/Queens.mic
 9\RelPath=Queens.mic
-size=16
+size=18
 
 [Packages]
 1\Name=@ByteArray()

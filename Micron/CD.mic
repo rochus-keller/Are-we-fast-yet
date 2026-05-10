@@ -124,6 +124,8 @@ type
         aircraft: ^CallSignArr
     end
 
+var csv3dOldVal: Vector3D
+
 const
     RB_RED = 0
     RB_BLACK = 1
@@ -536,8 +538,9 @@ begin
         if cmp < 0 then x := x.left
         elsif cmp > 0 then x := x.right
         else
+            csv3dOldVal := x.value
             x.value := value^
-            return @x.value
+            return @csv3dOldVal
         end
     end
     new(z)

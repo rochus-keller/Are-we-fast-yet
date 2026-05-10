@@ -305,7 +305,7 @@ procedure JsonObject_indexOf(me: ^JsonObject; name: ^array of char): integer
 var index: integer
 begin
     index := HashIndexTable_get(@me.table, name)
-    if (index # -1) and (StrArr_at(@me.names, index) = name) then
+    if (index # -1) and (StrArr_at(@me.names, index)^ = name^) then
         return index
     end
     assert(false)
@@ -401,12 +401,32 @@ begin
     me.base.kind := JV_LITERAL
     me.base.next := toDelete
     toDelete := @me.base
-    me.isNull_ := (value = "null")
-    me.isTrue_ := (value = "true")
-    me.isFalse_ := (value = "false")
+    me.isNull_ := (value^ = "null")
+    me.isTrue_ := (value^ = "true")
+    me.isFalse_ := (value^ = "false")
     return @me.base
 end JsonLiteral_create
 
+procedure JsonValue_delete(o: ^JsonValue)
+var next: ^JsonValue
+begin
+  while o # nil do
+    next := o.next
+    if o.kind = JV_OBJECT then
+        JsonObject_cleanup(o(JsonObject))
+    elsif o.kind = JV_ARRAY then
+        JsonArray_cleanup(o(JsonArray))
+    elsif o.kind = JV_STRING then
+        JsonString_cleanup(o(JsonString))
+    elsif o.kind = JV_NUMBER then
+        JsonNumber_cleanup(o(JsonNumber))
+    end
+    dispose(o)
+    o := next
+  end
+end JsonValue_delete
+
+(*
 procedure JsonValue_delete(o: ^JsonValue)
 begin
     if o = nil then return end
@@ -424,6 +444,7 @@ begin
     end
     dispose(o)
 end JsonValue_delete
+*)
 
 procedure Parser_init(me: ^Parser; const str: ^array of char)
 begin
