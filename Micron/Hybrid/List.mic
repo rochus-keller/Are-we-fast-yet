@@ -1,0 +1,178 @@
+// This code is derived from the SOM benchmarks, see AUTHORS.md file.
+// 
+// Copyright (c) 2025, 2026 Rochus Keller <me@rochus-keller.ch> (for Micron migration)
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the 'Software'), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+module List [level=3]
+
+import O := Object, B := Benchmark
+
+type
+  Element = record
+    inline base: O.Object
+    val: integer
+    next: ^Element
+  end
+
+
+// NOTE:
+// with refcount: 77us + no leaks
+// without refcount: 68us + some memory leaks
+//    in tail() some Element are disposed without delete
+// compare with 90us in generated C99 with Boehm GC
+
+procedure Element.setNext(e: ^Element)
+begin
+  // Object_release((Object*)me->next);
+  if self.next # nil then
+    self.next.release()
+  end
+  self.next := e
+end Element.setNext
+
+procedure Element_deinit(me: ^O.Object)
+var
+  elem: ^Element;
+begin
+  // Cast the pointer to ^Element
+  elem := me(Element)
+  elem.setNext(nil)
+end Element_deinit
+
+procedure Element_create(v: integer): ^Element
+var e: ^Element
+begin
+  // Element_create returns element with refcount set
+  new(e)
+  e.init(Element_deinit)
+  e.addRef()
+  e.val := v
+  e.next := nil
+  return e // TODO check that missing return is detected by the 
+end Element_create
+
+procedure Element.length(): integer
+begin
+  if self.next = nil then
+    return 1
+  else
+    return 1 + self.next.length()
+  end
+end Element.length
+
+procedure Element.getNext(): ^Element
+begin
+  return self.next
+end Element.getNext
+
+procedure Element.setVal(v: integer)
+begin
+  self.val := v
+end Element.setVal
+
+procedure Element.getVal(): integer
+begin
+  return self.val
+end Element.getVal
+
+procedure makeList(length: integer): ^Element
+var e: ^Element
+begin
+  // makeList returns element with refcount set
+  if length = 0 then
+    return nil
+  else
+    e := Element_create(length)
+    e.setNext(makeList(length - 1))
+    return e
+  end
+end makeList
+
+procedure isShorterThan(x, y: ^Element): boolean
+var
+  xTail, yTail: ^Element
+begin
+  xTail := x
+  yTail := y
+  while yTail # nil do
+    if xTail = nil then
+      return true
+    end
+    xTail := xTail.getNext()
+    yTail := yTail.getNext()
+  end
+  return false
+end isShorterThan
+
+procedure tail(x, y, z: ^Element): ^Element
+var
+  xx, yy, zz, res: ^Element
+begin
+  // tail returns element with refcount set
+  if isShorterThan(y, x) then
+    xx := tail(x.getNext(), y, z)
+    yy := tail(y.getNext(), z, x)
+    zz := tail(z.getNext(), x, y)
+    res := tail(xx, yy, zz)
+    xx.release()
+    yy.release()
+    zz.release()
+  else
+    res := z
+    z.addRef()
+  end
+  return res
+end tail
+
+procedure benchmark(bench: ^B.Benchmark): integer
+var
+  x, y, z, resultElem: ^Element; res : integer
+begin
+  x := makeList(15)
+  y := makeList(10)
+  z := makeList(6)
+  resultElem := tail(x, y, z)
+  res := resultElem.length()
+  resultElem.release()
+  x.release()
+  y.release()
+  z.release()
+  return res
+end benchmark
+
+procedure verifyResult(bench: ^B.Benchmark; result: integer): boolean
+begin
+  return 10 = result
+end verifyResult
+
+procedure create*(): ^B.Benchmark
+var
+  bench: ^B.Benchmark
+begin
+  new(bench)
+  bench.benchmark := benchmark
+  bench.verifyResult := verifyResult
+  bench.dispose := nil
+  bench.innerBenchmarkLoop := nil
+  return bench
+end create
+ 
+end List
+

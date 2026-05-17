@@ -1,0 +1,922 @@
+(* This code is derived from the SOM benchmarks, see AUTHORS.md file.
+ *
+ * Copyright (c) 2026 Rochus Keller <me@rochus-keller.ch> (for Micron migration)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the 'Software'), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *)
+ 
+module Havlak [level=3]
+
+import B := Benchmark
+
+const
+    BB_TOP = 0
+    BB_NONHEADER = 1
+    BB_REDUCIBLE = 2
+    BB_SELF = 3
+    BB_IRREDUCIBLE = 4
+    BB_DEAD = 5
+    UNVISITED = -1
+    MAXNONBACKPREDS = 32768
+
+type
+    BasicBlockPtr = ^BasicBlock
+    BasicBlockEdgePtr = ^BasicBlockEdge
+    SimpleLoopPtr = ^SimpleLoop
+    UnionFindNodePtr = ^UnionFindNode
+    LoopStructureGraphPtr = ^LoopStructureGraph
+
+import 
+    VBB := som.Vector(BasicBlockPtr)
+    VBBE := som.Vector(BasicBlockEdgePtr)
+    VSL := som.Vector(SimpleLoopPtr)
+    VUFN := som.Vector(UnionFindNodePtr)
+    VLSG := som.Vector(LoopStructureGraphPtr)
+    VI := som.Vector(integer)
+
+type
+    BasicBlock = record
+        inEdges: VBB.Vector
+        outEdges: VBB.Vector
+        name: integer
+    end
+
+
+type
+    BasicBlockEdge = record
+        from_: ^BasicBlock
+        to_: ^BasicBlock
+    end
+
+type
+    ControlFlowGraph = record
+        basicBlockMap: VBB.Vector
+        startNode: ^BasicBlock
+        edgeList: VBBE.Vector
+    end
+
+    SimpleLoop = record
+        basicBlocks: VBB.Vector
+        children: VSL.Vector
+        parent_: ^SimpleLoop
+        isRoot_: boolean
+        nestingLevel_: integer
+    end
+
+    UnionFindNode = record
+        parent_: ^UnionFindNode
+        bb: ^BasicBlock
+        loop_: ^SimpleLoop
+        dfsNumber: integer
+    end
+
+    LoopStructureGraph = record
+        root: ^SimpleLoop
+        loops: VSL.Vector
+        loopCounter: integer
+    end
+
+    HavlakLoopFinder = record
+        cfg: ^ControlFlowGraph
+        lsg: ^LoopStructureGraph
+        nonBackPreds: ^array of VI.Vector
+        backPreds: ^array of VI.Vector
+        numberArr: ^array of integer
+        numberSize: integer
+        maxSize: integer
+        header: ^array of integer
+        type_: ^array of integer
+        last_: ^array of integer
+        nodes: ^array of ^UnionFindNode
+    end
+
+    LoopTesterApp = record
+        cfg: ^ControlFlowGraph
+        lsg: ^LoopStructureGraph
+    end
+
+
+var
+    NumLoops: integer
+    NumNodes: integer
+
+procedure BasicBlock_create(name: integer): ^BasicBlock
+var me: ^BasicBlock
+begin
+    new(me)
+    me.name := name
+    me.inEdges := VBB.createDefault()
+    me.outEdges := VBB.createDefault()
+    return me
+end BasicBlock_create
+
+procedure BasicBlock.dispose()
+begin
+    self.inEdges.free()
+    self.outEdges.free()
+    dispose(self)
+end BasicBlock.dispose
+
+procedure ControlFlowGraph_create(): ^ControlFlowGraph
+var me: ^ControlFlowGraph
+begin
+    new(me)
+    me.startNode := nil
+    me.basicBlockMap := VBB.createDefault()
+    me.edgeList := VBBE.createDefault()
+    return me
+end ControlFlowGraph_create
+
+procedure ControlFlowGraph.dispose()
+var i: integer; bb: ^BasicBlock; be: ^BasicBlockEdge
+begin
+    for i := 0 to self.basicBlockMap.size() - 1 do
+        bb := self.basicBlockMap.at(i)^
+        if bb # nil then bb.dispose() end
+    end
+    for i := 0 to self.edgeList.size() - 1 do
+        be := self.edgeList.at(i)^
+        dispose(be)
+    end
+    self.basicBlockMap.free()
+    self.edgeList.free()
+    dispose(self)
+end ControlFlowGraph.dispose
+
+procedure ControlFlowGraph.getNumNodes(): integer
+begin
+    return self.basicBlockMap.size()
+end ControlFlowGraph.getNumNodes
+
+procedure ControlFlowGraph.createNode(name: integer): ^BasicBlock
+var node: ^BasicBlock; p: ^BasicBlock
+begin
+    if (name < self.basicBlockMap.size()) then
+        p := self.basicBlockMap.at(name)^
+        if p # nil then
+            return p
+        end
+    end
+    node := BasicBlock_create(name)
+    self.basicBlockMap.atPut(name, @node)
+    if self.getNumNodes() = 1 then
+        self.startNode := node
+    end
+    return node
+end ControlFlowGraph.createNode
+
+procedure BasicBlockEdge_create(cfg: ^ControlFlowGraph; fromName, toName: integer): ^BasicBlockEdge
+var me: ^BasicBlockEdge; f, t: ^BasicBlock
+begin
+    new(me)
+    f := cfg.createNode(fromName)
+    t := cfg.createNode(toName)
+    me.from_ := f
+    me.to_ := t
+    f.outEdges.append(@t)
+    t.inEdges.append(@f)
+    cfg.edgeList.append(@me)
+    return me
+end BasicBlockEdge_create
+
+procedure SimpleLoop_create(bb: ^BasicBlock): ^SimpleLoop
+var me: ^SimpleLoop
+begin
+    new(me)
+    me.parent_ := nil
+    me.isRoot_ := false
+    me.nestingLevel_ := 0
+    me.basicBlocks := VBB.createDefault()
+    me.children := VSL.createDefault()
+    if bb # nil then
+        me.basicBlocks.append(@bb)
+    end
+    return me
+end SimpleLoop_create
+
+procedure SimpleLoop.dispose()
+begin
+    self.basicBlocks.free()
+    self.children.free()
+    dispose(self)
+end SimpleLoop.dispose
+
+procedure SimpleLoop.addChildLoop(loop_: ^SimpleLoop)
+begin
+    self.children.append(@loop_)
+end SimpleLoop.addChildLoop
+
+procedure SimpleLoop.addNode(bb: ^BasicBlock)
+begin
+    self.basicBlocks.append(@bb)
+end SimpleLoop.addNode
+
+procedure SimpleLoop.setParent(parent: ^SimpleLoop)
+begin
+    self.parent_ := parent
+    parent.addChildLoop(self)
+end SimpleLoop.setParent
+
+procedure SimpleLoop.setNestingLevel(level: integer)
+begin
+    self.nestingLevel_ := level
+    if level = 0 then
+        self.isRoot_ := true
+    end
+end SimpleLoop.setNestingLevel
+
+procedure UnionFindNode_create(): ^UnionFindNode
+var me: ^UnionFindNode
+begin
+    new(me)
+    me.parent_ := nil
+    me.bb := nil
+    me.loop_ := nil
+    me.dfsNumber := 0
+    return me
+end UnionFindNode_create
+
+procedure UnionFindNode.initNode(bb: ^BasicBlock; dfsNumber: integer)
+begin
+    self.parent_ := self
+    self.bb := bb
+    self.dfsNumber := dfsNumber
+    self.loop_ := nil
+end UnionFindNode.initNode
+
+procedure UnionFindNode.findSet(): ^UnionFindNode
+type
+    IterData = record parent_: ^UnionFindNode end
+
+    procedure IterData.apply(const value: ^UnionFindNodePtr)
+    var iter_: ^UnionFindNode
+    begin
+        iter_ := value^
+        iter_.parent_ := self.parent_
+    end IterData.apply
+
+var nodeList: VUFN.Vector; node: ^UnionFindNode; d: IterData
+begin
+    nodeList := VUFN.createDefault()
+    node := self
+    while node # node.parent_ do
+        if node.parent_ # node.parent_.parent_ then
+            nodeList.append(@node)
+        end
+        node := node.parent_
+    end
+    d.parent_ := self.parent_
+    nodeList.forEach(d.apply)
+    nodeList.free()
+    return node
+end UnionFindNode.findSet
+
+procedure LoopStructureGraph_create(): ^LoopStructureGraph
+var me: ^LoopStructureGraph
+begin
+    new(me)
+    me.loopCounter := 0
+    me.root := SimpleLoop_create(nil)
+    me.root.setNestingLevel(0)
+    me.loopCounter := me.loopCounter + 1
+    me.loops := VSL.createDefault()
+    me.loops.append(@me.root)
+    return me
+end LoopStructureGraph_create
+
+procedure LoopStructureGraph.dispose()
+var i: integer; sl: ^SimpleLoop
+begin
+    for i := 0 to self.loops.size() - 1 do
+        sl := self.loops.at(i)^
+        sl.dispose()
+    end
+    self.loops.free()
+    dispose(self)
+end LoopStructureGraph.dispose
+
+procedure LoopStructureGraph.createNewLoop(bb: ^BasicBlock; isReducible: boolean): ^SimpleLoop
+var loop_: ^SimpleLoop
+begin
+    loop_ := SimpleLoop_create(bb)
+    self.loopCounter := self.loopCounter + 1
+    self.loops.append(@loop_)
+    return loop_
+end LoopStructureGraph.createNewLoop
+
+procedure^ LoopStructureGraph_calculateNestingLevelRec(loop_: ^SimpleLoop; depth: integer)
+
+procedure LoopStructureGraph.calculateNestingLevel()
+type
+    IterData = record root: ^SimpleLoop end
+
+    procedure IterData.apply(const value: ^SimpleLoopPtr)
+    var loop_: ^SimpleLoop
+    begin
+        loop_ := value^
+        if not loop_.isRoot_ then
+            if loop_.parent_ = nil then
+                loop_.setParent(self.root)
+            end
+        end
+    end IterData.apply
+
+var d: IterData
+begin
+    d.root := self.root
+    self.loops.forEach(d.apply)
+    LoopStructureGraph_calculateNestingLevelRec(self.root, 0)
+end LoopStructureGraph.calculateNestingLevel
+
+procedure LoopStructureGraph_calculateNestingLevelRec(loop_: ^SimpleLoop; depth: integer)
+type
+    IterData = record
+        loop_: ^SimpleLoop
+        depth: integer
+    end
+
+    procedure IterData.apply(const value: ^SimpleLoopPtr)
+    var liter: ^SimpleLoop; nl: integer
+    begin
+        liter := value^
+        LoopStructureGraph_calculateNestingLevelRec(liter, self.depth + 1)
+        nl := 1 + liter.nestingLevel_
+        if nl > self.loop_.nestingLevel_ then
+            self.loop_.setNestingLevel(nl)
+        end
+    end IterData.apply
+
+var d: IterData
+begin
+    d.loop_ := loop_
+    d.depth := depth
+    loop_.children.forEach(d.apply)
+end LoopStructureGraph_calculateNestingLevelRec
+
+procedure HavlakLoopFinder.init(cfg: ^ControlFlowGraph; lsg: ^LoopStructureGraph)
+begin
+    self.maxSize := 0
+    self.cfg := cfg
+    self.lsg := lsg
+    self.nonBackPreds := nil
+    self.backPreds := nil
+    self.numberArr := nil
+    self.numberSize := 0
+    self.header := nil
+    self.type_ := nil
+    self.last_ := nil
+    self.nodes := nil
+end HavlakLoopFinder.init
+
+procedure HavlakLoopFinder.deinit()
+var i: integer
+begin
+    if self.nodes # nil then
+        for i := 0 to self.maxSize - 1 do
+            if self.nodes[i] # nil then
+                dispose(self.nodes[i])
+            end
+        end
+        dispose(self.nodes)
+    end
+    if self.nonBackPreds # nil then
+        for i := 0 to self.maxSize - 1 do
+            if self.nonBackPreds[i] # nil then
+                self.nonBackPreds[i].free()
+            end
+        end
+        dispose(self.nonBackPreds)
+    end
+    if self.backPreds # nil then
+        for i := 0 to self.maxSize - 1 do
+            if self.backPreds[i] # nil then
+                self.backPreds[i].free()
+            end
+        end
+        dispose(self.backPreds)
+    end
+    if self.numberArr # nil then dispose(self.numberArr) end
+    if self.header # nil then dispose(self.header) end
+    if self.type_ # nil then dispose(self.type_) end
+    if self.last_ # nil then dispose(self.last_) end
+end HavlakLoopFinder.deinit
+
+procedure HavlakLoopFinder.isAncestor(w, v: integer): boolean
+begin
+    return (w <= v) and (v <= self.last_[w])
+end HavlakLoopFinder.isAncestor
+
+procedure HavlakLoopFinder.doDFS(currentNode: ^BasicBlock; current: integer): integer
+var lastId, i: integer; target: ^BasicBlock; n: integer
+begin
+    self.nodes[current].initNode(currentNode, current)
+    self.numberArr[currentNode.name] := current
+
+    lastId := current
+    for i := 0 to currentNode.outEdges.size() - 1 do
+        target := currentNode.outEdges.at(i)^
+        n := self.numberArr[target.name]
+        if n = UNVISITED then
+            lastId := self.doDFS(target, lastId + 1)
+        end
+    end
+
+    self.last_[current] := lastId
+    return lastId
+end HavlakLoopFinder.doDFS
+
+procedure HavlakLoopFinder.initAllNodes()
+var i: integer; bb: ^BasicBlock
+begin
+    for i := 0 to self.cfg.basicBlockMap.size() - 1 do
+        bb := self.cfg.basicBlockMap.at(i)^
+        if bb # nil then
+            self.numberArr[bb.name] := UNVISITED
+        end
+    end
+    self.doDFS(self.cfg.startNode, 0)
+end HavlakLoopFinder.initAllNodes
+
+procedure getNonBackPreds(arr: ^array of VI.Vector; i: integer): VI.Vector
+begin
+    if arr[i] = nil then
+        arr[i] := VI.createDefault()
+    end
+    return arr[i]
+end getNonBackPreds
+
+procedure getBackPreds(arr: ^array of VI.Vector; i: integer): VI.Vector
+begin
+    if arr[i] = nil then
+        arr[i] := VI.createDefault()
+    end
+    return arr[i]
+end getBackPreds
+
+procedure HavlakLoopFinder.processEdges(nodeW: ^BasicBlock; w: integer)
+type
+    IterData = record
+        that: ^HavlakLoopFinder
+        w: integer
+    end
+
+    procedure IterData.apply(const value: ^BasicBlockPtr)
+    var nodeV: ^BasicBlock; v: integer; bp, s: VI.Vector
+    begin
+        nodeV := value^
+        v := self.that.numberArr[nodeV.name]
+        if v # UNVISITED then
+            if self.that.isAncestor(self.w, v) then
+                bp := getBackPreds(self.that.backPreds, self.w)
+                bp.append(@v)
+            else
+                s := getNonBackPreds(self.that.nonBackPreds, self.w)
+                s.append(@v)
+            end
+        end
+    end IterData.apply
+
+var d: IterData
+begin
+    if nodeW.inEdges.size() > 0 then
+        d.that := self
+        d.w := w
+        nodeW.inEdges.forEach(d.apply)
+    end
+end HavlakLoopFinder.processEdges
+
+procedure HavlakLoopFinder.identifyEdges(size: integer)
+var w, tmp: integer; nodeW: ^BasicBlock
+begin
+    for w := 0 to size - 1 do
+        tmp := 0
+        self.header[w] := tmp
+        self.type_[w] := BB_NONHEADER
+        nodeW := self.nodes[w].bb
+        if nodeW = nil then
+            self.type_[w] := BB_DEAD
+        else
+            self.processEdges(nodeW, w)
+        end
+    end
+end HavlakLoopFinder.identifyEdges
+
+procedure HavlakLoopFinder.stepEProcessNonBackPreds(w: integer; nodePool, workList: VUFN.Vector; x: ^UnionFindNode)
+type
+    UfnEqHelper = record target: ^UnionFindNode end
+
+    procedure UfnEqHelper.test(const value: ^UnionFindNodePtr): boolean
+    begin
+        return value^ = self.target
+    end UfnEqHelper.test
+
+type
+    IterData = record
+        that: ^HavlakLoopFinder
+        w: integer
+        nodePool: VUFN.Vector
+        workList: VUFN.Vector
+    end
+
+    procedure IterData.apply(const value: ^integer)
+    var y, ydash: ^UnionFindNode; dfsNum: integer; tmp: VI.Vector
+        eq: UfnEqHelper
+    begin
+        y := self.that.nodes[value^]
+        ydash := y.findSet()
+        if not self.that.isAncestor(self.w, ydash.dfsNumber) then
+            self.that.type_[self.w] := BB_IRREDUCIBLE
+            dfsNum := ydash.dfsNumber
+            tmp := getNonBackPreds(self.that.nonBackPreds, self.w)
+            tmp.append(@dfsNum)
+        else
+            if ydash.dfsNumber # self.w then
+                eq.target := ydash
+                if not self.nodePool.hasSome(eq.test) then
+                    self.workList.append(@ydash)
+                    self.nodePool.append(@ydash)
+                end
+            end
+        end
+    end IterData.apply
+
+var d: IterData; s: VI.Vector
+begin
+    d.that := self
+    d.w := w
+    d.nodePool := nodePool
+    d.workList := workList
+    s := self.nonBackPreds[x.dfsNumber]
+    if s # nil then
+        s.forEach(d.apply)
+    end
+end HavlakLoopFinder.stepEProcessNonBackPreds
+
+procedure HavlakLoopFinder.stepD(w: integer; nodePool: VUFN.Vector)
+type
+    IterData = record
+        that: ^HavlakLoopFinder
+        w: integer
+        nodePool: VUFN.Vector
+    end
+
+    procedure IterData.apply(const value: ^integer)
+    var v: integer; tmp: ^UnionFindNode
+    begin
+        v := value^
+        if v # self.w then
+            tmp := self.that.nodes[v].findSet()
+            self.nodePool.append(@tmp)
+        else
+            self.that.type_[self.w] := BB_SELF
+        end
+    end IterData.apply
+
+var d: IterData; vec: VI.Vector
+begin
+    d.that := self
+    d.w := w
+    d.nodePool := nodePool
+    vec := self.backPreds[w]
+    if vec # nil then
+        vec.forEach(d.apply)
+    end
+end HavlakLoopFinder.stepD
+
+procedure HavlakLoopFinder.setLoopAttributes(w: integer; nodePool: VUFN.Vector; loop_: ^SimpleLoop)
+type
+    IterData = record
+        that: ^HavlakLoopFinder
+        w: integer
+        loop_: ^SimpleLoop
+    end
+
+    procedure IterData.apply(const value: ^UnionFindNodePtr)
+    var node: ^UnionFindNode
+    begin
+        node := value^
+        self.that.header[node.dfsNumber] := self.w
+        node.parent_ := self.that.nodes[self.w]
+        if node.loop_ # nil then
+            node.loop_.setParent(self.loop_)
+        else
+            self.loop_.addNode(node.bb)
+        end
+    end IterData.apply
+
+var d: IterData
+begin
+    self.nodes[w].loop_ := loop_
+    d.that := self
+    d.w := w
+    d.loop_ := loop_
+    nodePool.forEach(d.apply)
+end HavlakLoopFinder.setLoopAttributes
+
+procedure HavlakLoopFinder.findLoops()
+type
+    CopyIterData = record workList: VUFN.Vector end
+
+    procedure CopyIterData.apply(const value: ^UnionFindNodePtr)
+    var tmp: UnionFindNodePtr
+    begin
+        tmp := value^
+        self.workList.append(@tmp)
+    end CopyIterData.apply
+
+var size, i, w, nonBackSize: integer
+    oldNonBack, oldBack: ^array of VI.Vector
+    oldHeader, oldType, oldLast: ^array of integer
+    oldNodes: ^array of ^UnionFindNode
+    newNonBack, newBack: ^array of VI.Vector
+    newHeader, newType, newLast: ^array of integer
+    newNodes: ^array of ^UnionFindNode
+    nodePool, workList: VUFN.Vector
+    nodeW: ^BasicBlock; x: ^UnionFindNode
+    loop_: ^SimpleLoop
+    iterData: CopyIterData
+begin
+    if self.cfg.startNode = nil then return end
+
+    size := self.cfg.getNumNodes()
+
+    if self.nonBackPreds # nil then
+        for i := 0 to self.maxSize - 1 do
+            if self.nonBackPreds[i] # nil then self.nonBackPreds[i].free() end
+        end
+    end
+    if self.backPreds # nil then
+        for i := 0 to self.maxSize - 1 do
+            if self.backPreds[i] # nil then self.backPreds[i].free() end
+        end
+    end
+
+    if size > self.maxSize then
+        if self.nonBackPreds # nil then dispose(self.nonBackPreds) end
+        if self.backPreds # nil then dispose(self.backPreds) end
+        if self.header # nil then dispose(self.header) end
+        if self.type_ # nil then dispose(self.type_) end
+        if self.last_ # nil then dispose(self.last_) end
+        if self.nodes # nil then
+            for i := 0 to self.maxSize - 1 do
+                if self.nodes[i] # nil then dispose(self.nodes[i]) end
+            end
+            dispose(self.nodes)
+        end
+        if self.numberArr # nil then dispose(self.numberArr) end
+
+        new(self.nonBackPreds, size)
+        new(self.backPreds, size)
+        new(self.header, size)
+        new(self.type_, size)
+        new(self.last_, size)
+        new(self.nodes, size)
+        new(self.numberArr, size)
+
+        for i := 0 to size - 1 do
+            self.nonBackPreds[i] := nil
+            self.backPreds[i] := nil
+            self.nodes[i] := nil
+            self.numberArr[i] := UNVISITED
+        end
+        self.maxSize := size
+        self.numberSize := size
+    else
+        for i := 0 to self.maxSize - 1 do
+            self.nonBackPreds[i] := nil
+            self.backPreds[i] := nil
+            self.numberArr[i] := UNVISITED
+        end
+    end
+
+    for i := 0 to size - 1 do
+        self.nodes[i] := UnionFindNode_create()
+    end
+
+    self.initAllNodes()
+    self.identifyEdges(size)
+
+    self.header[0] := 0
+
+    for w := size - 1 to 0 by -1 do
+        nodePool := VUFN.createDefault()
+        nodeW := self.nodes[w].bb
+        if nodeW # nil then
+            self.stepD(w, nodePool)
+
+            workList := VUFN.createDefault()
+            iterData.workList := workList
+            nodePool.forEach(iterData.apply)
+
+            if nodePool.size() # 0 then
+                self.type_[w] := BB_REDUCIBLE
+            end
+
+            while not workList.isEmpty() do
+                x := workList.removeFirst()^
+                nonBackSize := 0
+                if self.nonBackPreds[x.dfsNumber] # nil then
+                    nonBackSize := self.nonBackPreds[x.dfsNumber].size()
+                end
+                if nonBackSize > MAXNONBACKPREDS then
+                    nodePool.free()
+                    workList.free()
+                    return
+                end
+                self.stepEProcessNonBackPreds(w, nodePool, workList, x)
+            end
+
+            if (nodePool.size() > 0) or (self.type_[w] = BB_SELF) then
+                loop_ := self.lsg.createNewLoop(nodeW, self.type_[w] # BB_IRREDUCIBLE)
+                self.setLoopAttributes(w, nodePool, loop_)
+            end
+            workList.free()
+        end
+        nodePool.free()
+    end
+end HavlakLoopFinder.findLoops
+
+procedure LoopTesterApp.init()
+begin
+    self.cfg := ControlFlowGraph_create()
+    self.lsg := LoopStructureGraph_create()
+    self.cfg.createNode(0)
+end LoopTesterApp.init
+
+procedure LoopTesterApp.deinit()
+begin
+    self.lsg.dispose()
+    self.cfg.dispose()
+end LoopTesterApp.deinit
+
+procedure LoopTesterApp.buildDiamond(start: integer): integer
+var bb0: integer
+begin
+    bb0 := start
+    BasicBlockEdge_create(self.cfg, bb0, bb0 + 1)
+    BasicBlockEdge_create(self.cfg, bb0, bb0 + 2)
+    BasicBlockEdge_create(self.cfg, bb0 + 1, bb0 + 3)
+    BasicBlockEdge_create(self.cfg, bb0 + 2, bb0 + 3)
+    return bb0 + 3
+end LoopTesterApp.buildDiamond
+
+procedure LoopTesterApp.buildConnect(start, end_: integer)
+begin
+    BasicBlockEdge_create(self.cfg, start, end_)
+end LoopTesterApp.buildConnect
+
+procedure LoopTesterApp.buildStraight(start, n: integer): integer
+var i: integer
+begin
+    for i := 0 to n - 1 do
+        self.buildConnect(start + i, start + i + 1)
+    end
+    return start + n
+end LoopTesterApp.buildStraight
+
+procedure LoopTesterApp.buildBaseLoop(from_: integer): integer
+var header, diamond1, d11, diamond2, footer: integer
+begin
+    header := self.buildStraight(from_, 1)
+    diamond1 := self.buildDiamond(header)
+    d11 := self.buildStraight(diamond1, 1)
+    diamond2 := self.buildDiamond(d11)
+    footer := self.buildStraight(diamond2, 1)
+    self.buildConnect(diamond2, d11)
+    self.buildConnect(diamond1, header)
+    self.buildConnect(footer, from_)
+    footer := self.buildStraight(footer, 1)
+    return footer
+end LoopTesterApp.buildBaseLoop
+
+procedure LoopTesterApp.constructSimpleCFG()
+begin
+    self.cfg.createNode(0)
+    self.buildBaseLoop(0)
+    self.cfg.createNode(1)
+    BasicBlockEdge_create(self.cfg, 0, 2)
+end LoopTesterApp.constructSimpleCFG
+
+procedure LoopTesterApp.findLoops(loopStructure: ^LoopStructureGraph)
+var finder: HavlakLoopFinder
+begin
+    finder.init(self.cfg, loopStructure)
+    finder.findLoops()
+    finder.deinit()
+end LoopTesterApp.findLoops
+
+procedure LoopTesterApp.addDummyLoops(numDummyLoops: integer)
+var dummyloop: integer
+begin
+    for dummyloop := 0 to numDummyLoops - 1 do
+        self.findLoops(self.lsg)
+    end
+end LoopTesterApp.addDummyLoops
+
+procedure LoopTesterApp.constructCFG(parLoops, pparLoops, ppparLoops: integer)
+var n, parlooptrees, i, j, top, bottom: integer
+begin
+    n := 2
+    for parlooptrees := 0 to parLoops - 1 do
+        self.cfg.createNode(n + 1)
+        self.buildConnect(2, n + 1)
+        n := n + 1
+
+        for i := 0 to pparLoops - 1 do
+            top := n
+            n := self.buildStraight(n, 1)
+            for j := 0 to ppparLoops - 1 do
+                n := self.buildBaseLoop(n)
+            end
+            bottom := self.buildStraight(n, 1)
+            self.buildConnect(n, top)
+            n := bottom
+        end
+        self.buildConnect(n, 1)
+    end
+end LoopTesterApp.constructCFG
+
+procedure LoopTesterApp.main(numDummyLoops, findLoopIterations, parLoops, pparLoops, ppparLoops: integer)
+var i: integer; l: ^LoopStructureGraph; toDelete: VLSG.Vector
+begin
+    self.constructSimpleCFG()
+    self.addDummyLoops(numDummyLoops)
+    self.constructCFG(parLoops, pparLoops, ppparLoops)
+
+    self.findLoops(self.lsg)
+    toDelete := VLSG.createDefault()
+    for i := 0 to findLoopIterations - 1 do
+        l := LoopStructureGraph_create()
+        toDelete.append(@l)
+        self.findLoops(l)
+    end
+
+    self.lsg.calculateNestingLevel()
+    for i := 0 to toDelete.size() - 1 do
+        toDelete.at(i)^.dispose()
+    end
+    toDelete.free()
+    NumLoops := self.lsg.loops.size()
+    NumNodes := self.cfg.getNumNodes()
+end LoopTesterApp.main
+
+procedure Havlak_verifyResult(a, b, innerIterations: integer): boolean
+begin
+    if innerIterations = 15000 then return (a = 46602) and (b = 5213) end
+    if innerIterations = 1500 then return (a = 6102) and (b = 5213) end
+    if innerIterations = 150 then return (a = 2052) and (b = 5213) end
+    if innerIterations = 15 then return (a = 1647) and (b = 5213) end
+    if innerIterations = 1 then return (a = 1605) and (b = 5213) end
+    return false
+end Havlak_verifyResult
+
+procedure innerBenchmarkLoop(me: ^B.Benchmark; innerIterations: integer): boolean
+var app: LoopTesterApp; res: boolean
+begin
+    app.init()
+    app.main(innerIterations, 50, 10, 10, 5)
+    res := Havlak_verifyResult(NumLoops, NumNodes, innerIterations)
+    app.deinit()
+    return res
+end innerBenchmarkLoop
+
+procedure benchmarkFn(me: ^B.Benchmark): integer
+begin
+    assert(false)
+    return 0
+end benchmarkFn
+
+procedure verifyResultFn(me: ^B.Benchmark; result: integer): boolean
+begin
+    assert(false)
+    return false
+end verifyResultFn
+
+procedure create*(): ^B.Benchmark
+var bench: ^B.Benchmark
+begin
+    new(bench)
+    bench.benchmark := benchmarkFn
+    bench.verifyResult := verifyResultFn
+    bench.dispose := nil
+    bench.innerBenchmarkLoop := innerBenchmarkLoop
+    return bench
+end create
+
+end Havlak

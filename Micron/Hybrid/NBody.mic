@@ -1,0 +1,314 @@
+(* The Computer Language Benchmarks Game
+ * http://shootout.alioth.debian.org/
+ *
+ * Based on nbody.java and adapted based on the SOM version.
+ * Copyright (c) 2025, 2026 Rochus Keller <me@rochus-keller.ch> (for Micron migration)
+ *)
+
+module NBody [level=3]
+
+import B := Benchmark, M := MathL
+
+const
+  PI = 3.141592653589793
+  SOLAR_MASS = (4.0 * PI * PI)
+  DAYS_PER_YER = 365.24
+  Count = 5
+
+type
+  Body = record
+    x,y,z: longreal
+    vx,vy,vz: longreal
+    mass: longreal
+  end
+
+  NBodySystem = record
+    bodies: array Count of Body
+  end;
+
+procedure Body.getX(): longreal
+begin
+  return self.x
+end Body.getX
+
+procedure Body.getY(): longreal
+begin
+  return self.y
+end Body.getY
+
+procedure Body.getZ(): longreal
+begin
+  return self.z
+end Body.getZ
+
+procedure Body.getVX(): longreal
+begin
+  return self.vx
+end Body.getVX
+
+procedure Body.getVY(): longreal
+begin
+  return self.vy
+end Body.getVY
+
+procedure Body.getVZ(): longreal
+begin
+  return self.vz
+end Body.getVZ
+
+procedure Body.getMass(): longreal
+begin
+  return self.mass
+end Body.getMass
+
+procedure Body.setX(x: longreal)
+begin
+  self.x := x
+end Body.setX
+
+procedure Body.setY(y: longreal)
+begin
+  self.y := y
+end Body.setY
+
+procedure Body.setZ(z: longreal)
+begin
+  self.z := z
+end Body.setZ
+
+procedure Body.setVX(vx: longreal)
+begin
+  self.vx := vx
+end Body.setVX
+
+procedure Body.setVY(vy: longreal)
+begin
+  self.vy := vy
+end Body.setVY
+
+procedure Body.setVZ(vz: longreal)
+begin
+  self.vz := vz
+end Body.setVZ
+
+procedure Body.offsetMomentum(px, py, pz: longreal)
+begin
+  self.vx := 0.0 - (px / SOLAR_MASS)
+  self.vy := 0.0 - (py / SOLAR_MASS)
+  self.vz := 0.0 - (pz / SOLAR_MASS)
+end Body.offsetMomentum
+
+procedure Body_create(x, y, z, vx, vy, vz, mass: longreal): Body
+var
+  res: Body
+begin
+  res.x := x
+  res.y := y
+  res.z := z
+  res.vx := vx * DAYS_PER_YER
+  res.vy := vy * DAYS_PER_YER
+  res.vz := vz * DAYS_PER_YER
+  res.mass := mass * SOLAR_MASS
+  return res
+end Body_create
+
+procedure Body_jupiter(): Body
+begin
+  return Body_create(
+    4.84143144246472090e+00,
+    -1.16032004402742839e+00,
+    -1.03622044471123109e-01,
+    1.66007664274403694e-03,
+    7.69901118419740425e-03,
+    -6.90460016972063023e-05,
+    9.54791938424326609e-04)
+end Body_jupiter
+
+procedure Body_saturn(): Body
+begin
+  return Body_create(
+    8.34336671824457987e+00,
+    4.12479856412430479e+00,
+    -4.03523417114321381e-01,
+    -2.76742510726862411e-03,
+    4.99852801234917238e-03,
+    2.30417297573763929e-05,
+    2.85885980666130812e-04)
+end Body_saturn
+
+procedure Body_uranus(): Body
+begin
+  return Body_create(
+    1.28943695621391310e+01,
+    -1.51111514016986312e+01,
+    -2.23307578892655734e-01,
+    2.96460137564761618e-03,
+    2.37847173959480950e-03,
+    -2.96589568540237556e-05,
+    4.36624404335156298e-05)
+end Body_uranus
+
+procedure Body_neptune(): Body
+begin
+  return Body_create(
+    1.53796971148509165e+01,
+    -2.59193146099879641e+01,
+    1.79258772950371181e-01,
+    2.68067772490389322e-03,
+    1.62824170038242295e-03,
+    -9.51592254519715870e-05,
+    5.15138902046611451e-05)
+end Body_neptune
+
+procedure Body_sun(): Body
+begin
+  return Body_create(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+end Body_sun
+
+procedure NBodySystem.init()
+var
+  px, py, pz: longreal
+  i: integer
+  b: ^Body
+  tmp: longreal
+begin
+  self.bodies[0] := Body_sun()
+  self.bodies[1] := Body_jupiter()
+  self.bodies[2] := Body_saturn()
+  self.bodies[3] := Body_uranus()
+  self.bodies[4] := Body_neptune()
+
+  px := 0.0
+  py := 0.0
+  pz := 0.0
+
+  for i := 0 to Count - 1 do
+    b := @self.bodies[i]
+    px := px + b.getVX() * b.getMass()
+    py := py + b.getVY() * b.getMass()
+    pz := pz + b.getVZ() * b.getMass()
+  end
+
+  self.bodies[0].offsetMomentum(px, py, pz)
+end NBodySystem.init
+
+procedure NBodySystem.advance(dt: longreal)
+var
+  i, j: integer
+  iBody, jBody: ^Body
+  dx, dy, dz: longreal
+  dSquared, distance, mag: longreal
+begin
+  for i := 0 to Count - 1 do
+    iBody := @self.bodies[i]
+    for j := i + 1 to Count - 1 do
+      jBody := @self.bodies[j]
+      dx := iBody.getX() - jBody.getX()
+      dy := iBody.getY() - jBody.getY()
+      dz := iBody.getZ() - jBody.getZ()
+
+      dSquared := dx * dx + dy * dy + dz * dz
+      distance := M.sqrt(dSquared)
+      mag := dt / (dSquared * distance);
+
+      iBody.setVX(iBody.getVX() - (dx * jBody.getMass() * mag))
+      iBody.setVY(iBody.getVY() - (dy * jBody.getMass() * mag))
+      iBody.setVZ(iBody.getVZ() - (dz * jBody.getMass() * mag))
+
+      jBody.setVX(jBody.getVX() + (dx * iBody.getMass() * mag))
+      jBody.setVY(jBody.getVY() + (dy * iBody.getMass() * mag))
+      jBody.setVZ(jBody.getVZ() + (dz * iBody.getMass() * mag))
+    end
+  end
+
+  for i := 0 to Count - 1i do
+    iBody := @self.bodies[i]
+    iBody.setX(iBody.getX() + dt * iBody.getVX())
+    iBody.setY(iBody.getY() + dt * iBody.getVY())
+    iBody.setZ(iBody.getZ() + dt * iBody.getVZ())
+  end
+end NBodySystem.advance
+
+procedure NBodySystem.energy(): longreal
+var
+  e: longreal
+  i, j: integer
+  iBody, jBody: ^Body
+  dx, dy, dz, distance: longreal
+begin
+  e := 0.0;
+  for i := 0 to Count - 1i do
+    iBody := @self.bodies[i]
+    e := e + 0.5 * iBody.getMass()
+         * (iBody.getVX() * iBody.getVX() +
+            iBody.getVY() * iBody.getVY() +
+            iBody.getVZ() * iBody.getVZ())
+    for j := i + 1 to Count - 1i do
+      jBody := @self.bodies[j]
+      dx := iBody.getX() - jBody.getX()
+      dy := iBody.getY() - jBody.getY()
+      dz := iBody.getZ() - jBody.getZ()
+      distance := M.sqrt(dx * dx + dy * dy + dz * dz)
+      e := e - (iBody.getMass() * jBody.getMass()) / distance
+    end
+  end
+  return e
+end NBodySystem.energy
+
+procedure verifyResult2(resultValue: longreal; innerIterations: integer): boolean
+const
+  epsilon = 0.00000000000005 // orig: 00000000000000005
+begin
+  if innerIterations = 250000 then
+    return (abs(resultValue) - 0.1690859889909308 < epsilon)
+  end
+  if innerIterations = 1 then
+    return (abs(resultValue) - 0.16907495402506745 < epsilon)
+  end
+
+  // Checkstyle: stop
+  print("No verification result for ")print(innerIterations)println(" found");
+  print("Result is: ")println(resultValue)
+  // Checkstyle: resume
+  return false
+end verifyResult2
+
+procedure innerBenchmarkLoop(me: ^B.Benchmark; innerIterations: integer): boolean
+var
+  system: NBodySystem
+  i: integer
+begin
+  system.init()
+  for i := 0 to innerIterations - 1 do
+    system.advance(0.01)
+  end;
+  return verifyResult2(system.energy(), innerIterations)
+end innerBenchmarkLoop
+
+procedure benchmark(me: ^B.Benchmark): integer
+begin
+  assert(false) // Should never be reached
+  return 0
+end benchmark
+
+procedure verifyResult(me: ^B.Benchmark; resultVal: integer): boolean
+begin
+  assert(false) // Should never be reached
+  return false
+end verifyResult
+
+procedure create*(): ^B.Benchmark
+var
+  bench: ^B.Benchmark;
+begin
+  new(bench)
+  bench.benchmark := benchmark
+  bench.verifyResult := verifyResult
+  bench.dispose := nil
+  bench.innerBenchmarkLoop := innerBenchmarkLoop
+  return bench
+end create
+
+
+end NBody
+

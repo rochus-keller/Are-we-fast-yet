@@ -1,0 +1,99 @@
+(* This code is derived from the SOM benchmarks, see AUTHORS.md file.
+ *
+ * Copyright (c) 2024, 2026 Rochus Keller <me@rochus-keller.ch> (for Micron migration)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the 'Software'), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *)
+ 
+module Bounce [level=3]
+ 
+ import som.Random, B := Benchmark
+ 
+ type
+ 	Ball = record
+			 x, y, xVel, yVel: int32
+		   end
+
+	procedure Ball.init()
+	begin
+		self.x := 0; self.y := 0; self.xVel := 0; self.yVel := 0
+		self.x := sig(Random.next() mod 500)
+		self.y := sig(Random.next() mod 500)
+		self.xVel := sig(Random.next() mod 300) - 150
+		self.yVel := sig(Random.next() mod 300) - 150
+	end Ball.init
+	
+	procedure Ball.bounce(): boolean
+      const xLimit = 500; yLimit = 500
+      var bounced: boolean
+	begin
+	  bounced := false
+      self.x := self.x + self.xVel
+      self.y := self.y + self.yVel
+      if self.x > xLimit 	then self.x := xLimit; self.xVel := 0 - abs(self.xVel); bounced := true end
+      if self.x < 0 		then self.x := 0; 	 self.xVel := abs(self.xVel); 	  bounced := true end
+      if self.y > yLimit 	then self.y := yLimit; self.yVel := 0 - abs(self.yVel); bounced := true end 
+      if self.y < 0 		then self.y := 0; 	 self.yVel := abs(self.yVel); 	  bounced := true end
+      return bounced
+	end Ball.bounce
+
+	procedure benchmark(me: ^B.Benchmark):integer
+	  const
+	    ballCount = 100
+	  var 
+		bounces, i, j: integer
+		balls : ^array of Ball
+	begin
+		Random.reset()
+		bounces  := 0
+
+		new(balls,ballCount)
+		for i := 0 to ballCount-1 do
+		    balls[i].init()
+		end
+
+		for i := 0 to 50-1 do
+		    for j := 0 to ballCount-1 do
+		        if balls[j].bounce() then
+		            inc(bounces)
+		        end
+		    end
+		end
+		dispose(balls)
+		return bounces
+	end benchmark
+    	
+	procedure verifyResult(bench: ^B.Benchmark; result: integer): boolean
+	begin
+    	return 1331 = result
+	end verifyResult
+	
+	procedure create*(): ^B.Benchmark
+	var
+	  bench: ^B.Benchmark
+	begin
+		new(bench)
+		bench.benchmark := benchmark
+		bench.verifyResult := verifyResult
+		bench.dispose := nil
+		bench.innerBenchmarkLoop := nil
+		return bench
+	end create
+
+ end Bounce

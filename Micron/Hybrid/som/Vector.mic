@@ -1,0 +1,297 @@
+(* This code is derived from the SOM benchmarks, see AUTHORS.md file.
+ *
+ * Copyright (c) 2024, 2026 Rochus Keller <me@rochus-keller.ch> (for Micron migration)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the 'Software'), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *)
+ 
+module Vector(T) [visibility="*", level=3]
+
+import I := Interfaces(T)
+
+type
+	Equal* = proc(const lhs,rhs: ^T):boolean
+	Vector* = pointer to VectorDesc
+	VectorDesc* = record
+				firstIdx, lastIdx, length: integer
+				storage: pointer to array of T
+			 end
+
+procedure VectorDesc.expand*(newLength: integer)
+var i: integer; old: pointer to array of T
+begin
+    if newLength <= self.length then
+        return
+    end
+
+    if newLength > 0 then
+    	old := self.storage
+        new(self.storage, newLength) 
+        if old # nil then
+		    for i := 0 to self.length -1 do
+		    	self.storage[i] := old[i]
+		    end
+		end
+    end
+    self.length := newLength
+end expand
+
+procedure VectorDesc.enlarge(idx: integer)
+var newLength: integer
+begin
+    newLength := self.length
+    while newLength <= idx do
+        newLength := newLength * 2
+        newLength := newLength + 50
+    end
+    self.expand(newLength)
+end enlarge
+
+procedure VectorDesc.at*(idx: integer): ^T
+begin
+    if (idx < 0) or (idx >= self.length) then
+        assert(false) // "out of bounds"
+    end
+    return @ self.storage[idx]
+end at
+
+procedure VectorDesc.atPut*(idx: integer; const val: ^T)
+begin
+    if idx >= self.length then
+        self.enlarge(idx)
+    end
+    self.storage[idx] := val^
+    if self.lastIdx < idx + 1 then
+        self.lastIdx := idx + 1
+    end
+end atPut
+
+procedure VectorDesc.forEach*(iter: I.ValueIterator)
+var i: integer
+begin
+    for i := self.firstIdx to self.lastIdx - 1 do
+        iter(@self.storage[i])
+    end
+end forEach
+
+procedure VectorDesc.hasSome*(iter: I.TestIterator): boolean
+var i: integer
+begin
+    for i := self.firstIdx to self.lastIdx - 1 do
+        if iter(@ self.storage[i]) then
+            return true
+        end
+    end
+    return false
+end hasSome
+
+type 
+	Remove_Iterator = record
+    	newArray: pointer to array of T
+    	newLast: integer
+    	obj: ^T
+    	found: boolean
+    	eq: Equal
+	end
+
+	procedure Remove_Iterator.apply(const value: ^T)
+	begin
+	    if self.eq(value, self.obj) then
+	        self.found := true
+	    else
+	        self.newArray[self.newLast] := value^
+	        inc(self.newLast)
+	    end
+	end apply
+
+procedure VectorDesc.remove*(const obj: ^T; eq: Equal): boolean 
+var iter: Remove_Iterator
+begin
+    if self.length = 0 then
+        return false
+    end
+
+	new( iter.newArray, self.length )
+    iter.found := false
+    iter.obj := obj
+    iter.newLast := 0
+    iter.eq := eq
+
+    self.forEach(iter.apply)
+
+    dispose(self.storage)
+    self.storage  := iter.newArray
+    self.lastIdx  := iter.newLast
+    self.firstIdx := 0
+    return iter.found
+end remove
+
+
+procedure VectorDesc.append*(const elem: ^T) 
+begin
+    if self.lastIdx >= self.length then
+        self.enlarge(self.lastIdx)
+    end
+	self.storage[self.lastIdx] := elem^
+    inc(self.lastIdx)
+end append
+
+procedure VectorDesc.isEmpty*():boolean
+begin
+    return self.lastIdx = self.firstIdx
+end isEmpty
+
+procedure VectorDesc.removeFirst*(): ^T
+begin
+    if self.isEmpty() then
+        assert(false) // "empty"
+    end
+    inc(self.firstIdx)
+    return @ self.storage[self.firstIdx - 1]
+end removeFirst
+
+procedure VectorDesc.removeAll*() 
+begin
+    self.firstIdx := 0
+    self.lastIdx := 0
+end removeAll
+
+procedure VectorDesc.size*():integer
+begin
+    return self.lastIdx - self.firstIdx
+end size
+
+procedure VectorDesc.capacity*():integer
+begin
+    return self.length
+end capacity
+
+proc create*(len: integer):Vector
+var v: Vector
+begin
+    new(v)
+    v.firstIdx := 0
+    v.lastIdx := 0
+    v.length := 0
+    v.storage := nil
+    v.expand(len)
+    return v
+end create
+
+proc createDefault*():Vector
+begin
+    return create(0)
+end createDefault
+
+proc copy*(const in_: Vector):Vector
+var me: Vector; i: integer
+begin
+    me := create(in_.length)
+    me.firstIdx := in_.firstIdx
+    me.lastIdx := in_.lastIdx
+    for i := 0 to in_.length -1 do
+    	me.storage[i] := in_.storage[i]
+    end
+    return me
+end copy
+
+procedure VectorDesc.free*()
+begin
+    if self = nil then
+        return
+    end
+    if self.storage # nil then
+        dispose(self.storage)
+    end
+    dispose(self)
+end free
+
+proc swap(storage: pointer to array of T; i, j: integer) inline
+begin
+    assert(false) // "NotImplemented"
+end swap
+
+procedure VectorDesc.sort_imp(i, j: integer; c: I.CompareIterator) 
+var n, ij, k, l: integer
+	di, dj, tt, dij: ^T
+begin
+
+    n := j + 1 - i
+    if n <= 1 then
+        return
+    end
+
+    di := @self.storage[i]
+    dj := @self.storage[j]
+
+    if c(di, dj) > 0 then
+        swap(self.storage, i, j)
+        tt := di
+        di := dj
+        dj := tt
+    end
+
+    if n > 2 then
+        ij := (i + j) div 2
+        dij := @self.storage[ij]
+
+        if c(di, dij) <= 0 then
+            if c(dij, dj) > 0 then
+                swap(self.storage, j, ij)
+                dij := dj
+            end
+        else
+            swap(self.storage, i, ij)
+            dij := di
+        end
+
+        if n > 3 then
+            k := i
+            l := j - 1
+
+            loop
+                while (k <= l) and (c(dij, @self.storage[l]) <= 0) do
+                    dec(l)
+                end
+
+                inc(k)
+                while (k <= l) and (c( @self.storage[k], dij) <= 0) do
+                    inc(k)
+                end
+
+                if k > l then
+                    exit
+                end
+                swap(self.storage, k, l)
+            end
+
+            self.sort_imp(i, l, c)
+            self.sort_imp(k, j, c)
+        end
+    end
+end sort_imp
+
+procedure VectorDesc.sort*(c: I.CompareIterator)
+begin
+    if self.size() > 0 then
+        self.sort_imp(self.firstIdx, self.lastIdx - 1, c)
+    end
+end sort
+
+end Vector

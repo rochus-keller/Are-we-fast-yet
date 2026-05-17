@@ -1,0 +1,595 @@
+(*
+ * Copyright (c) 2001-2016 Stefan Marr
+ * Copyright (c) 2026 Rochus Keller <me@rochus-keller.ch> (for Micron migration)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the 'Software'), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *)
+
+module CD [level=3]
+
+import B := Benchmark
+import Math := Math
+
+type
+    Vector2D = record
+        x, y: real
+    end
+
+    Vector3D = record
+        x, y, z: real
+    end
+
+    CallSign = record
+        value: integer
+    end
+
+    Aircraft = record
+        callsign: CallSign
+        position: Vector3D
+    end
+
+    Collision = record
+        aircraftA: CallSign
+        aircraftB: CallSign
+        position: Vector3D
+    end
+
+    Motion = record
+        callsign: CallSign
+        posOne: Vector3D
+        posTwo: Vector3D
+    end
+
+import
+    VM := som.Vector(Motion)
+
+type
+    MotionsVecPtr = ^MotionsVecDesc
+    MotionsVecDesc = record
+        v: VM.Vector
+    end
+
+import
+    VA := som.Vector(Aircraft)
+    VC := som.Vector(Collision)
+    VCS := som.Vector(CallSign)
+    VMP := som.Vector(MotionsVecPtr)
+    RBState := som.RedBlackTree(CallSign, Vector3D)
+    RBSeen := som.RedBlackTree(Vector2D, boolean)
+    RBVoxel := som.RedBlackTree(Vector2D, MotionsVecPtr)
+    RBCSBool := som.RedBlackTree(CallSign, boolean)
+
+type
+    CollisionDetector = record
+        state: RBState.Tree
+    end
+
+    Simulator = record
+        aircraft: VCS.Vector
+    end
+
+const
+    MIN_X = 0.0
+    MIN_Y = 0.0
+    MAX_X = 1000.0
+    MAX_Y = 1000.0
+    MIN_Z = 0.0
+    MAX_Z = 10.0
+    PROXIMITY_RADIUS = 1.0
+    GOOD_VOXEL_SIZE = 2.0
+
+var
+    horizontal: Vector2D
+    vertical: Vector2D
+
+procedure compareNumbers(a, b: real): integer
+begin
+    if a = b then return 0 end
+    if a < b then return -1 end
+    if a > b then return 1 end
+    if a = a then return 1 end
+    return -1
+end compareNumbers
+
+procedure Vector2D_compare(const lhs, rhs: ^Vector2D): integer
+var result: integer
+begin
+    result := compareNumbers(lhs.x, rhs.x)
+    if result # 0 then return result end
+    return compareNumbers(lhs.y, rhs.y)
+end Vector2D_compare
+
+procedure CallSign_compare(const lhs, rhs: ^CallSign): integer
+begin
+    if lhs.value = rhs.value then return 0 end
+    if lhs.value < rhs.value then return -1 end
+    return 1
+end CallSign_compare
+
+procedure Vector3D.plus(const rhs: ^Vector3D):Vector3D
+var res: Vector3D
+begin
+    res.x := self.x + rhs.x
+    res.y := self.y + rhs.y
+    res.z := self.z + rhs.z
+    return res
+end Vector3D.plus
+
+procedure Vector3D.minus(const rhs: ^Vector3D):Vector3D
+var res: Vector3D
+begin
+    res.x := self.x - rhs.x
+    res.y := self.y - rhs.y
+    res.z := self.z - rhs.z
+    return res
+end Vector3D.minus
+
+procedure Vector3D.dot(const rhs: ^Vector3D): real
+begin
+    return self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
+end Vector3D.dot
+
+procedure Vector3D.squaredMag(): real
+begin
+    return self.dot(self)
+end Vector3D.squaredMag
+
+procedure Vector3D.magnitude(): real
+begin
+    return Math.sqrt(self.squaredMag())
+end Vector3D.magnitude
+
+procedure Vector3D.times(amount: real): Vector3D
+var res: Vector3D
+begin
+    res.x := self.x * amount
+    res.y := self.y * amount
+    res.z := self.z * amount
+    return res
+end Vector3D.times
+
+procedure Vector2D.plus(const rhs: ^Vector2D):Vector2D
+var res: Vector2D
+begin
+    res.x := self.x + rhs.x
+    res.y := self.y + rhs.y
+    return res
+end Vector2D.plus
+
+procedure Vector2D.minus(const rhs: ^Vector2D):Vector2D
+var res: Vector2D
+begin
+    res.x := self.x - rhs.x
+    res.y := self.y - rhs.y
+    return res
+end Vector2D.minus
+
+procedure Motion.delta():Vector3D
+begin
+    return self.posTwo.minus(@self.posOne)
+end Motion.delta
+
+procedure Motion.findIntersection(other: ^Motion; result: ^Vector3D): boolean
+var init1, init2, vec1, vec2, tmp1, tmp2, r1, r2: Vector3D
+    radius, a, b, c, discr, v1, v2, v, dist: real
+begin
+    init1 := self.posOne
+    init2 := other.posOne
+    vec1 := self.delta()
+    vec2 := other.delta()
+    radius := PROXIMITY_RADIUS
+
+    tmp1 := vec2.minus(@vec1)
+    a := tmp1.squaredMag()
+
+    if a # 0.0 then
+        tmp1 := init1.minus(@init2)
+        tmp2 := vec1.minus(@vec2)
+        b := 2.0 * tmp1.dot(@tmp2)
+
+        tmp1 := init2.minus(@init1)
+        c := -radius * radius + tmp1.squaredMag()
+
+        discr := b * b - 4.0 * a * c
+        if discr < 0.0 then return false end
+
+        v1 := (-b - Math.sqrt(discr)) / (2.0 * a)
+        v2 := (-b + Math.sqrt(discr)) / (2.0 * a)
+
+        if (v1 <= v2) and (((v1 <= 1.0) and (1.0 <= v2)) or ((v1 <= 0.0) and (0.0 <= v2)) or ((0.0 <= v1) and (v2 <= 1.0))) then
+            if v1 <= 0.0 then v := 0.0
+            else v := v1 end
+
+            tmp1 := vec1.times(v)
+            r1 := init1.plus(@tmp1)
+            tmp2 := vec2.times(v)
+            r2 := init2.plus(@tmp2)
+
+            tmp1 := r1.plus(@r2)
+            result^ := tmp1.times(0.5)
+            if (result.x >= MIN_X) and (result.x <= MAX_X) and (result.y >= MIN_Y) and (result.y <= MAX_Y) and (result.z >= MIN_Z) and (result.z <= MAX_Z) then
+                return true
+            end
+        end
+        return false
+    end
+
+    tmp1 := init2.minus(@init1)
+    dist := tmp1.magnitude()
+    if dist <= radius then
+        tmp1 := init1.plus(@init2)
+        result^ := tmp1.times(0.5)
+        return true
+    end
+    return false
+end Motion.findIntersection
+
+procedure Vector3D.voxelHash():Vector2D
+var xDiv, yDiv: integer; res: Vector2D
+begin
+    xDiv := floor(self.x / GOOD_VOXEL_SIZE)
+    yDiv := floor(self.y / GOOD_VOXEL_SIZE)
+    res.x := GOOD_VOXEL_SIZE * flt(xDiv)
+    res.y := GOOD_VOXEL_SIZE * flt(yDiv)
+    if self.x < 0.0 then res.x := res.x - GOOD_VOXEL_SIZE end
+    if self.y < 0.0 then res.y := res.y - GOOD_VOXEL_SIZE end
+    return res
+end Vector3D.voxelHash
+
+procedure Vector2D.isInVoxel(const motion: ^Motion): boolean
+var init_, fin_: Vector3D
+    v_s, r, v_x, x0, xv, v_y, y0, yv, low_x, high_x, low_y, high_y, tmp: real
+begin
+    if (self.x > MAX_X) or (self.x < MIN_X) or (self.y > MAX_Y) or (self.y < MIN_Y) then
+        return false
+    end
+    init_ := motion.posOne
+    fin_ := motion.posTwo
+    v_s := GOOD_VOXEL_SIZE
+    r := PROXIMITY_RADIUS / 2.0
+    v_x := self.x; x0 := init_.x; xv := fin_.x - init_.x
+    v_y := self.y; y0 := init_.y; yv := fin_.y - init_.y
+
+    low_x := (v_x - r - x0) / xv
+    high_x := (v_x + v_s + r - x0) / xv
+    if xv < 0.0 then tmp := low_x; low_x := high_x; high_x := tmp end
+
+    low_y := (v_y - r - y0) / yv
+    high_y := (v_y + v_s + r - y0) / yv
+    if yv < 0.0 then tmp := low_y; low_y := high_y; high_y := tmp end
+
+    return (((xv = 0.0) and (v_x <= x0 + r) and (x0 - r <= v_x + v_s)) or ((low_x <= 1.0) and (1.0 <= high_x)) or 
+          ((low_x <= 0.0) and (0.0 <= high_x)) or ((0.0 <= low_x) and (high_x <= 1.0))) and 
+          (((yv = 0.0) and (v_y <= y0 + r) and (y0 - r <= v_y + v_s)) or ((low_y <= 1.0) and (1.0 <= high_y)) or 
+          ((low_y <= 0.0) and (0.0 <= high_y)) or ((0.0 <= low_y) and (high_y <= 1.0))) and 
+          ((xv = 0.0) or (yv = 0.0) or ((low_y <= high_x) and (high_x <= high_y)) or 
+          ((low_y <= low_x) and (low_x <= high_y)) or ((low_x <= low_y) and (high_y <= high_x)))
+end Vector2D.isInVoxel
+
+procedure putIntoMap(voxelMap: RBVoxel.Tree; const voxel: ^Vector2D; const motion: ^Motion)
+var existing: ^MotionsVecPtr; mv: MotionsVecPtr
+begin
+    existing := voxelMap.get(voxel)
+    if existing = nil then
+        new(mv)
+        mv.v := VM.createDefault()
+        mv.v.append(motion)
+        voxelMap.put(voxel, @mv)
+    else
+        existing^.v.append(motion)
+    end
+end putIntoMap
+
+procedure recurse(voxelMap: RBVoxel.Tree; seen: RBSeen.Tree; const nextVoxel: ^Vector2D; const motion: ^Motion)
+var res: ^boolean; t: boolean; v: Vector2D
+begin
+    if not nextVoxel.isInVoxel(motion) then return end
+
+    t := true
+    res := seen.put(nextVoxel, @t)
+    if (res # nil) and res^ then return end
+
+    putIntoMap(voxelMap, nextVoxel, motion)
+
+    v.x := nextVoxel.x - GOOD_VOXEL_SIZE; v.y := nextVoxel.y
+    recurse(voxelMap, seen, @v, motion)
+    v.x := nextVoxel.x + GOOD_VOXEL_SIZE; v.y := nextVoxel.y
+    recurse(voxelMap, seen, @v, motion)
+    v.x := nextVoxel.x; v.y := nextVoxel.y - GOOD_VOXEL_SIZE
+    recurse(voxelMap, seen, @v, motion)
+    v.x := nextVoxel.x; v.y := nextVoxel.y + GOOD_VOXEL_SIZE
+    recurse(voxelMap, seen, @v, motion)
+    v.x := nextVoxel.x - GOOD_VOXEL_SIZE; v.y := nextVoxel.y - GOOD_VOXEL_SIZE
+    recurse(voxelMap, seen, @v, motion)
+    v.x := nextVoxel.x - GOOD_VOXEL_SIZE; v.y := nextVoxel.y + GOOD_VOXEL_SIZE
+    recurse(voxelMap, seen, @v, motion)
+    v.x := nextVoxel.x + GOOD_VOXEL_SIZE; v.y := nextVoxel.y - GOOD_VOXEL_SIZE
+    recurse(voxelMap, seen, @v, motion)
+    v.x := nextVoxel.x + GOOD_VOXEL_SIZE; v.y := nextVoxel.y + GOOD_VOXEL_SIZE
+    recurse(voxelMap, seen, @v, motion)
+end recurse
+
+procedure drawMotionOnVoxelMap(voxelMap: RBVoxel.Tree; const motion: ^Motion)
+var seen: RBSeen.Tree; voxel: Vector2D
+begin
+    seen := RBSeen.create(Vector2D_compare)
+    voxel := motion.posOne.voxelHash()
+    recurse(voxelMap, seen, @voxel, motion)
+    seen.free()
+end drawMotionOnVoxelMap
+
+procedure reduceCollisionSet(motions: VM.Vector; result: VMP.Vector)
+type
+    IterData2 = record result: VMP.Vector end
+    
+    procedure IterData2.apply(const key: ^Vector2D; const value: ^MotionsVecPtr)
+    begin
+        if value^.v.size() > 1 then
+            self.result.append(value)
+        else
+            value^.v.free()
+            dispose(value^)
+        end
+    end IterData2.apply
+  
+type
+    IterData1 = record voxelMap: RBVoxel.Tree end
+    
+    procedure IterData1.apply(const value: ^Motion)
+    begin
+        drawMotionOnVoxelMap(self.voxelMap, value)
+    end IterData1.apply
+  
+var 
+    voxelMap: RBVoxel.Tree; i: integer; mv: MotionsVecPtr
+    iter2: IterData2; iter1: IterData1
+    
+begin
+    voxelMap := RBVoxel.create(Vector2D_compare)
+
+    for i := 0 to result.size() - 1 do
+        mv := result.at(i)^
+        mv.v.removeAll()
+    end
+    result.removeAll()
+    
+    iter1.voxelMap := voxelMap
+    motions.forEach(iter1.apply)
+
+    iter2.result := result
+    voxelMap.forEach(iter2.apply)
+    voxelMap.free()
+end reduceCollisionSet
+
+procedure CollisionDetector.iter3(const value: ^CallSign)
+begin
+    self.state.remove(value)
+end CollisionDetector.iter3
+
+procedure CollisionDetector.handleNewFrame(frame: VA.Vector; collisions: VC.Vector)
+type
+    Iter1Data = record
+        seen: RBCSBool.Tree
+        state: RBState.Tree
+        motions: VM.Vector
+    end
+    
+    procedure Iter1Data.apply(const value: ^Aircraft)
+    var oldPosition: ^Vector3D; newPosition: Vector3D; t: boolean; m: Motion
+    begin
+        oldPosition := self.state.put(@value.callsign, @value.position)
+        newPosition := value.position
+        t := true
+        self.seen.put(@value.callsign, @t)
+    
+        m.callsign := value.callsign
+        if oldPosition = nil then
+            m.posOne := newPosition
+            m.posTwo := newPosition
+        else
+            m.posOne := oldPosition^
+            m.posTwo := newPosition
+        end
+        self.motions.append(@m)
+    end Iter1Data.apply
+
+type
+    Iter2Data = record
+        seen: RBCSBool.Tree
+        toRemove: VCS.Vector
+    end
+    
+    procedure Iter2Data.apply(const key: ^CallSign; const value: ^Vector3D)
+    begin
+        if self.seen.get(key) = nil then
+            self.toRemove.append(key)
+        end
+    end Iter2Data.apply
+
+type
+    Iter3Data = record
+      collisions: VC.Vector
+      end
+
+    procedure Iter3Data.apply(const value: ^MotionsVecPtr)
+    var reduced: VM.Vector
+        i, j: integer; motion1, motion2: ^Motion
+        collision: Vector3D; hit: boolean; coll: Collision
+    begin
+        reduced := value^.v
+        for i := 0 to reduced.size() - 1 do
+            motion1 := reduced.at(i)
+            for j := i + 1 to reduced.size() - 1 do
+                motion2 := reduced.at(j)
+                collision.x := 0.0; collision.y := 0.0; collision.z := 0.0
+                hit := motion1.findIntersection(motion2, @collision)
+                if hit then
+                    coll.aircraftA := motion1.callsign
+                    coll.aircraftB := motion2.callsign
+                    coll.position := collision
+                    self.collisions.append(@coll)
+                end
+            end
+        end
+    end Iter3Data.apply
+
+var motions: VM.Vector
+    iter1data: Iter1Data
+    iter2data: Iter2Data
+    iter3data: Iter3Data
+    toRemove: VCS.Vector
+    allReduced: VMP.Vector
+    i: integer; mv: MotionsVecPtr
+    
+begin
+    motions := VM.createDefault()
+    iter1data.seen := RBCSBool.create(CallSign_compare)
+    iter1data.motions := motions
+    iter1data.state := self.state
+
+    frame.forEach(iter1data.apply)
+
+    toRemove := VCS.createDefault()
+    iter2data.seen := iter1data.seen
+    iter2data.toRemove := toRemove
+
+    self.state.forEach(iter2data.apply)
+
+    toRemove.forEach(self.iter3)
+
+    allReduced := VMP.createDefault()
+    reduceCollisionSet(motions, allReduced)
+
+    collisions.removeAll()
+
+    iter3data.collisions := collisions
+    allReduced.forEach(iter3data.apply)
+
+    iter1data.seen.free()
+    motions.free()
+    for i := 0 to allReduced.size() - 1 do
+        mv := allReduced.at(i)^
+        mv.v.free()
+        dispose(mv)
+    end
+    allReduced.free()
+    toRemove.free()
+end CollisionDetector.handleNewFrame
+
+procedure Simulator.init(numAircraft: integer)
+var i: integer; cs: CallSign
+begin
+    self.aircraft := VCS.createDefault()
+    for i := 0 to numAircraft - 1 do
+        cs.value := i
+        self.aircraft.append(@cs)
+    end
+end Simulator.init
+
+procedure Simulator.simulate(frame: VA.Vector; time: real)
+var i: integer; a: Aircraft
+begin
+    i := 0
+    while i < self.aircraft.size() do
+        a.callsign := self.aircraft.at(i)^
+        a.position.x := time
+        a.position.y := Math.cos(time) * 2.0 + flt(i) * 3.0
+        a.position.z := 10.0
+        frame.append(@a)
+        a.callsign := self.aircraft.at(i + 1)^
+        a.position.x := time
+        a.position.y := Math.sin(time) * 2.0 + flt(i) * 3.0
+        a.position.z := 10.0
+        frame.append(@a)
+        i := i + 2
+    end
+end Simulator.simulate
+
+procedure benchmark2(numAircrafts: integer): integer
+var numFrames, i, actualCollisions: integer
+    simulator: Simulator; detector: CollisionDetector
+    time: real; frame: VA.Vector; collisions: VC.Vector
+begin
+    numFrames := 200
+    simulator.init(numAircrafts)
+    detector.state := RBState.create(CallSign_compare)
+    actualCollisions := 0
+
+    for i := 0 to numFrames - 1 do
+        time := flt(i) / 10.0
+        frame := VA.createDefault()
+        simulator.simulate(frame, time)
+        collisions := VC.createDefault()
+        detector.handleNewFrame(frame, collisions)
+        actualCollisions := actualCollisions + collisions.size()
+        frame.free()
+        collisions.free()
+    end
+
+    detector.state.free()
+    simulator.aircraft.free()
+    return actualCollisions
+end benchmark2
+
+procedure verifyResult2(actualCollisions, numAircrafts: integer): boolean
+begin
+    if numAircrafts = 1000 then return actualCollisions = 14484 end
+    if numAircrafts = 500 then return actualCollisions = 14484 end
+    if numAircrafts = 250 then return actualCollisions = 10830 end
+    if numAircrafts = 200 then return actualCollisions = 8655 end
+    if numAircrafts = 100 then return actualCollisions = 4305 end
+    if numAircrafts = 10 then return actualCollisions = 390 end
+    if numAircrafts = 2 then return (actualCollisions = 42) or (actualCollisions = 40) end
+    return false
+end verifyResult2
+
+procedure innerBenchmarkLoop(me: ^B.Benchmark; innerIterations: integer): boolean
+begin
+    return verifyResult2(benchmark2(innerIterations), innerIterations)
+end innerBenchmarkLoop
+
+procedure benchmarkFn(me: ^B.Benchmark): integer
+begin
+    assert(false)
+    return 0
+end benchmarkFn
+
+procedure verifyResultFn(me: ^B.Benchmark; result: integer): boolean
+begin
+    assert(false)
+    return false
+end verifyResultFn
+
+procedure create*(): ^B.Benchmark
+var bench: ^B.Benchmark
+begin
+    new(bench)
+    bench.benchmark := benchmarkFn
+    bench.verifyResult := verifyResultFn
+    bench.dispose := nil
+    bench.innerBenchmarkLoop := innerBenchmarkLoop
+    return bench
+end create
+
+begin
+    horizontal.x := GOOD_VOXEL_SIZE
+    horizontal.y := 0.0
+    vertical.x := 0.0
+    vertical.y := GOOD_VOXEL_SIZE
+end CD
