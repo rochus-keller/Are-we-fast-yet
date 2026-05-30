@@ -113,7 +113,7 @@ type
 proc remove_iter(const value: ^T; data: I.Data)
 var me: ^Remove_Iterator
 begin
-    me := data(Remove_Iterator)
+    me := cast(@Remove_Iterator,data)
     if me.eq(value, me.obj) then
         me.found := true
     else

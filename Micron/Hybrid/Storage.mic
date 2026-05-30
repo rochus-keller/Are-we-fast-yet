@@ -75,7 +75,7 @@ end buildTreeDepth
 procedure benchmark(me: ^B.Benchmark): integer
 var s: ^Storage; arr: TreeArray
 begin
-	s := me(Storage)
+	s := cast(@Storage,me)
     R.reset()
     s.count := 0
     arr := buildTreeDepth(s, 7)

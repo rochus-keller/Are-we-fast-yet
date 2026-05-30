@@ -411,13 +411,13 @@ begin
   while o # nil do
     next := o.next
     if o.kind = JV_OBJECT then
-        o(JsonObject).cleanup()
+        cast(@JsonObject,o).cleanup()
     elsif o.kind = JV_ARRAY then
-        o(JsonArray).cleanup()
+        cast(@JsonArray,o).cleanup()
     elsif o.kind = JV_STRING then
-        o(JsonString).cleanup()
+        cast(@JsonString,o).cleanup()
     elsif o.kind = JV_NUMBER then
-        o(JsonNumber).cleanup()
+        cast(@JsonNumber,o).cleanup()
     end
     dispose(o)
     o := next
@@ -772,15 +772,15 @@ begin
     elsif parseResult.kind # JV_OBJECT then
         res := false
     else
-        tmp := parseResult(JsonObject).get("head")
+        tmp := cast(@JsonObject,parseResult).get("head")
         if (tmp = nil) or (tmp.kind # JV_OBJECT) then
             res := false
         else
-            tmp := parseResult(JsonObject).get("operations")
+            tmp := cast(@JsonObject,parseResult).get("operations")
             if (tmp = nil) or (tmp.kind # JV_ARRAY) then
                 res := false
             else
-                res := tmp(JsonArray).size() = 156
+                res := cast(@JsonArray,tmp).size() = 156
             end
         end
     end

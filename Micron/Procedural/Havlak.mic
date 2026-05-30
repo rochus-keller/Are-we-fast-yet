@@ -291,7 +291,7 @@ end UnionFindNode_initNode
 procedure UnionFindNode_findSet_iter(const value: ^UnionFindNodePtr; data: pointer to any)
 var parent: ^UnionFindNode; iter_: ^UnionFindNode
 begin
-    parent := data(UnionFindNode)
+    parent := cast(@UnionFindNode,data)
     iter_ := value^
     iter_.parent_ := parent
 end UnionFindNode_findSet_iter
@@ -350,7 +350,7 @@ procedure^ LoopStructureGraph_calculateNestingLevelRec(loop_: ^SimpleLoop; depth
 procedure LoopStructureGraph_calculateNestingLevel_iter(const value: ^SimpleLoopPtr; data: pointer to any)
 var root: ^SimpleLoop; loop_: ^SimpleLoop
 begin
-    root := data(SimpleLoop)
+    root := cast(@SimpleLoop,data)
     loop_ := value^
     if not loop_.isRoot_ then
         if loop_.parent_ = nil then
@@ -368,7 +368,7 @@ end LoopStructureGraph_calculateNestingLevel
 procedure LoopStructureGraph_calculateNestingLevelRec_iter(const value: ^SimpleLoopPtr; data: pointer to any)
 var d: ^NestingLevelRecIter; liter: ^SimpleLoop; nl: integer
 begin
-    d := data(NestingLevelRecIter)
+    d := cast(@NestingLevelRecIter,data)
     liter := value^
     LoopStructureGraph_calculateNestingLevelRec(liter, d.depth + 1)
     nl := 1 + liter.nestingLevel_
@@ -438,8 +438,6 @@ begin
     return (w <= v) and (v <= me.last_[w])
 end HavlakLoopFinder_isAncestor
 
-procedure^ HavlakLoopFinder_doDFS(me: ^HavlakLoopFinder; currentNode: ^BasicBlock; current: integer): integer
-
 procedure HavlakLoopFinder_doDFS(me: ^HavlakLoopFinder; currentNode: ^BasicBlock; current: integer): integer
 var lastId, i: integer; target: ^BasicBlock; n: integer
 begin
@@ -490,7 +488,7 @@ end getBackPreds
 procedure HavlakLoopFinder_processEdges_iter(const value: ^BasicBlockPtr; data: pointer to any)
 var d: ^ProcessEdgesIter; nodeV: ^BasicBlock; v: integer; bp, s: VI.Vector
 begin
-    d := data(ProcessEdgesIter)
+    d := cast(@ProcessEdgesIter,data)
     nodeV := value^
     v := d.that.numberArr[nodeV.name]
     if v # UNVISITED then
@@ -532,13 +530,13 @@ end HavlakLoopFinder_identifyEdges
 
 procedure ufnEq(const value:  ^UnionFindNodePtr; data: ^any): boolean
 begin
-    return value^ = data(UnionFindNode)
+    return value^ = cast(@UnionFindNode,data)
 end ufnEq
 
 procedure HavlakLoopFinder_stepEProcessNonBackPreds_iter(const value: ^integer; data: pointer to any)
 var d: ^StepEProcessNonBackPredsIter; y, ydash: ^UnionFindNode; dfsNum: integer; tmp: VI.Vector
 begin
-    d := data(StepEProcessNonBackPredsIter)
+    d := cast(@StepEProcessNonBackPredsIter,data)
     y := d.that.nodes[value^]
     ydash := UnionFindNode_findSet(y)
     if not HavlakLoopFinder_isAncestor(d.that, d.w, ydash.dfsNumber) then
@@ -572,7 +570,7 @@ end HavlakLoopFinder_stepEProcessNonBackPreds
 procedure HavlakLoopFinder_stepD_iter(const value: ^integer; data: pointer to any)
 var d: ^StepDIter; v: integer; tmp: ^UnionFindNode
 begin
-    d := data(StepDIter)
+    d := cast(@StepDIter,data)
     v := value^
     if v # d.w then
         tmp := UnionFindNode_findSet(d.that.nodes[v])
@@ -597,7 +595,7 @@ end HavlakLoopFinder_stepD
 procedure HavlakLoopFinder_setLoopAttributes_iter(const value: ^UnionFindNodePtr; data: pointer to any)
 var d: ^SetLoopAttributesIter; node: ^UnionFindNode
 begin
-    d := data(SetLoopAttributesIter)
+    d := cast(@SetLoopAttributesIter,data)
     node := value^
     d.that.header[node.dfsNumber] := d.w
     node.parent_ := d.that.nodes[d.w]
@@ -621,7 +619,7 @@ end HavlakLoopFinder_setLoopAttributes
 procedure HavlakLoopFinder_findLoops_iter(const value: ^UnionFindNodePtr; data: pointer to any)
 var d: ^FindLoopsIterData; tmp: UnionFindNodePtr
 begin
-    d := data(FindLoopsIterData)
+    d := cast(@FindLoopsIterData,data)
     tmp := value^
     VUFN.append(d.workList, @tmp)
 end HavlakLoopFinder_findLoops_iter

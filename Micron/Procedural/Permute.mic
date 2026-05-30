@@ -58,7 +58,7 @@ type
     proc benchmark(me: ^B.Benchmark): integer
     var p: ^Permute; i: integer
 	begin
-	    p := me(Permute)
+	    p := cast(@Permute,me)
 		p.count := 0
 		new(p.v, 6)
 		permute(p,6)

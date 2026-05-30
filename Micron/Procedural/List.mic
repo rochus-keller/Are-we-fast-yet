@@ -52,7 +52,7 @@ var
   elem: ^Element;
 begin
   // Cast the pointer to ^Element
-  elem := me(Element)
+  elem := cast(@Element,me)
   Element_setNext(elem, nil)
 end Element_deinit
 

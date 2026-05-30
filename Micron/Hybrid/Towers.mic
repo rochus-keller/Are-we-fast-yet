@@ -126,7 +126,7 @@ end moveDisks
 procedure benchmark(b: ^B.Benchmark): integer
 var i: integer; me: ^Towers
 begin
-	me := b(Towers)
+	me := cast(@Towers,b)
     for i := 0 to PilesCount-1 do
         me.piles[i] := nil
     end

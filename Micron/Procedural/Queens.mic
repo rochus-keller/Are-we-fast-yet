@@ -107,7 +107,7 @@ var
 begin
   resultBool := true
   for i := 0 to 9 do
-    resultBool := resultBool and queens(me(Queens))
+    resultBool := resultBool and queens(cast(@Queens,me))
   end;
   if resultBool then return 1 else return 0 end
 end benchmark

@@ -326,7 +326,7 @@ end drawMotionOnVoxelMap
 procedure reduceCollisionSet_iter2(const key: ^Vector2D; const value: ^MotionsVecPtr; data: pointer to any)
 var result: VMP.Vector
 begin
-    result := data(VMP.VectorDesc)
+    result := cast(VMP.Vector,data)
     if VM.size(value^.v) > 1 then
         VMP.append(result, value)
     else
@@ -338,7 +338,7 @@ end reduceCollisionSet_iter2
 procedure reduceCollisionSet_iter1(const value: ^Motion; data: pointer to any)
 var voxelMap: RBVoxel.Tree
 begin
-    voxelMap := data(RBVoxel.TreeDesc)
+    voxelMap := cast(RBVoxel.Tree,data)
     drawMotionOnVoxelMap(voxelMap, value)
 end reduceCollisionSet_iter1
 
@@ -367,7 +367,7 @@ end
 procedure handleNewFrame_iter2(const key: ^CallSign; const value: ^Vector3D; data: pointer to any)
 var d: ^HandleNewFrame_Iter2Data
 begin
-    d := data(HandleNewFrame_Iter2Data)
+    d := cast(@HandleNewFrame_Iter2Data,data)
     if RBCSBool.get(d.seen, key) = nil then
         VCS.append(d.toRemove, key)
     end
@@ -383,7 +383,7 @@ procedure handleNewFrame_iter1(const value: ^Aircraft; data: pointer to any)
 var me: ^HandleNewFrame_Iter1Data
     oldPosition: ^Vector3D; newPosition: Vector3D; t: boolean; m: Motion
 begin
-    me := data(HandleNewFrame_Iter1Data)
+    me := cast(@HandleNewFrame_Iter1Data,data)
     oldPosition := RBState.put(me.state, @value.callsign, @value.position)
     newPosition := value.position
     t := true
@@ -403,7 +403,7 @@ end handleNewFrame_iter1
 procedure handleNewFrame_iter3(const value: ^CallSign; data: pointer to any)
 var state: RBState.Tree
 begin
-    state := data(RBState.TreeDesc)
+    state := cast(RBState.Tree,data)
     RBState.remove(state, value)
 end handleNewFrame_iter3
 
@@ -412,7 +412,7 @@ var collisions: VC.Vector; reduced: VM.Vector
     i, j: integer; motion1, motion2: ^Motion
     collision: Vector3D; hit: boolean; coll: Collision
 begin
-    collisions := data(VC.VectorDesc)
+    collisions := cast(VC.Vector,data)
     reduced := value^.v
 
     for i := 0 to VM.size(reduced) - 1 do

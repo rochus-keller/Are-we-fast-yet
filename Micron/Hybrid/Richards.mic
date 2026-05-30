@@ -562,7 +562,7 @@ type
     dataRecord: ^DeviceTaskDataRecord
     functionWork: ^Packet
   begin
-    dataRecord := wordArg(DeviceTaskDataRecord)
+    dataRecord := cast(@DeviceTaskDataRecord,wordArg)
     functionWork := workArg
     if functionWork = NO_WORK then
     	functionWork := dataRecord.getPending()
@@ -600,7 +600,7 @@ type
     workPacket, devicePacket: ^Packet
     count: integer
   begin
-    dataRecord := word(HandlerTaskDataRecord)
+    dataRecord := cast(@HandlerTaskDataRecord,word)
     if work # NO_WORK then
       if work.getKind() = WORK_PACKET_KIND then
         dataRecord.workInAdd(work)
@@ -647,7 +647,7 @@ type
   var
     dataRecord: ^IdleTaskDataRecord
   begin
-    dataRecord := wordArg(IdleTaskDataRecord)
+    dataRecord := cast(@IdleTaskDataRecord,wordArg)
     dataRecord.setCount(dataRecord.getCount() - 1)
     if dataRecord.getCount() = 0 then
       return self.s.holdSelf()
@@ -685,7 +685,7 @@ type
     data: ^WorkerTaskDataRecord
     i: integer
   begin
-    data := word(WorkerTaskDataRecord)
+    data := cast(@WorkerTaskDataRecord,word)
     if work = NO_WORK then
       return self.s.markWaiting()
     else

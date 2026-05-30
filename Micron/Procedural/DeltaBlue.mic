@@ -162,15 +162,12 @@ begin
     return lhs^ = rhs^
 end Constraint_eq
 
-procedure^ Constraint_isInput(me: ^Constraint): boolean
 procedure^ Constraint_isSatisfied(me: ^Constraint): boolean
 procedure^ Constraint_addToGraph(me: ^Constraint)
 procedure^ Constraint_removeFromGraph(me: ^Constraint)
 procedure^ Constraint_chooseMethod(me: ^Constraint; mark: integer): integer
-procedure^ Constraint_execute(me: ^Constraint)
 procedure^ Constraint_markUnsatisfied(me: ^Constraint)
 procedure^ Constraint_getOutput(me: ^Constraint): ^Variable
-procedure^ Constraint_recalculate(me: ^Constraint)
 procedure^ Planner_incrementalAdd(me: ^Planner; c: ^Constraint)
 procedure^ Planner_incrementalRemove(me: ^Planner; c: ^Constraint)
 procedure^ Planner_addPropagate(me: ^Planner; c: ^Constraint; mark: integer): boolean
@@ -180,7 +177,7 @@ procedure^ Constraint_inputsHasOne(me: ^Constraint; fn: VarTestIterator; data: p
 procedure AbstractConstraint_inputsKnown_iter(const value: ^VariablePtr; data: pointer to any): boolean
 var d: ^MarkData; v: ^Variable
 begin
-    d := data(MarkData)
+    d := cast(@MarkData,data)
     v := value^
     if (v.mark = d.mark) or v.stay or (v.determinedBy = nil) then
         return false
@@ -271,7 +268,7 @@ end AbstractConstraint_destroyConstraint
 procedure AbstractConstraint_satisfy_iter(const value: ^VariablePtr; data: pointer to any)
 var d: ^MarkData; v: ^Variable
 begin
-    d := data(MarkData)
+    d := cast(@MarkData,data)
     v := value^
     v.mark := d.mark
 end AbstractConstraint_satisfy_iter
@@ -611,7 +608,7 @@ end Planner_constraintsConsuming
 procedure Planner_removePropagateFrom_iter1(const value: ^ConstraintPtr; data: pointer to any)
 var todo: VV.Vector; c: ^Constraint; v: ^Variable
 begin
-    todo := data(VV.VectorDesc)
+    todo := cast(VV.Vector,data)
     c := value^
     Constraint_recalculate(c)
     v := Constraint_getOutput(c)
