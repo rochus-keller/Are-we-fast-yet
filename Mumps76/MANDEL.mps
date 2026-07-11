@@ -1,0 +1,52 @@
+MANDEL ; Mandelbrot benchmark (strict MUMPS NBS-118 1976)
+ ; migrated by me@rochus-keller.ch, see also AUTHORS.md file
+ Q
+BENCH ;
+ S SUM=0,BYTEA=0,BITNUM=0
+ F Y=0:1 Q:Y'<SIZE  D MROW
+ S RSLT=SUM
+ Q
+MROW ; one image row
+ S CI=(2.0*Y/SIZE)-1.0
+ F X=0:1 Q:X'<SIZE  D MCOL
+ Q
+MCOL ; one pixel; iterate z=z^2+c
+ S ZR=0.0,ZRZR=0.0,ZI=0.0,ZIZI=0.0
+ S CR=(2.0*X/SIZE)-1.5
+ S NOTDON=1,ESCAPE=0
+ F Z=0:1 Q:'NOTDON!(Z'<50)  D MITER
+ S BYTEA=(BYTEA*2)+ESCAPE
+ S BITNUM=BITNUM+1
+ I BITNUM=8 D MEMIT Q
+ I X=(SIZE-1) D MFLUSH
+ Q
+MITER ; one z iteration
+ S ZR=ZRZR-ZIZI+CR
+ S ZI=(2.0*ZR*ZI)+CI
+ S ZRZR=ZR*ZR,ZIZI=ZI*ZI
+ I (ZRZR+ZIZI)>4.0 S NOTDON=0,ESCAPE=1
+ Q
+MEMIT ; a full byte is ready
+ S XA=SUM,XB=BYTEA D XOR S SUM=XR
+ S BYTEA=0,BITNUM=0
+ Q
+MFLUSH ; end of row: pad and flush partial byte
+ F J=1:1:8-BITNUM S BYTEA=BYTEA*2
+ S XA=SUM,XB=BYTEA D XOR S SUM=XR
+ S BYTEA=0,BITNUM=0
+ Q
+XOR ; XR = XA xor XB for non-negative integers
+ S XR=0,XBIT=1
+ F XI=1:1 Q:(XA=0)&(XB=0)  D XORB
+ Q
+XORB ;
+ S XVA=XA#2,XVB=XB#2
+ I XVA'=XVB S XR=XR+XBIT
+ S XA=XA\2,XB=XB\2,XBIT=XBIT*2
+ Q
+VERIFY ;
+ I SIZE=1 S OK=RSLT=128 Q
+ I SIZE=500 S OK=RSLT=191 Q
+ I SIZE=750 S OK=RSLT=50 Q
+ S OK=0
+ Q

@@ -1,0 +1,36 @@
+BOUNCE ; Bounce benchmark (strict MUMPS NBS-118 1976)
+ ; migrated by me@rochus-keller.ch, see also AUTHORS.md file
+ Q
+BENCH ;
+ K BALLS
+ S SEED=74755
+ S BALLCT=100,BOUNCS=0
+ F I=1:1:BALLCT D BINIT
+ F J=1:1:50 D BSTEP
+ S RSLT=BOUNCS
+ Q
+BINIT ; initialise ball I from the LCG stream
+ S SEED=((SEED*1309)+13849)#65536,BALLS(I,"x")=SEED#500
+ S SEED=((SEED*1309)+13849)#65536,BALLS(I,"y")=SEED#500
+ S SEED=((SEED*1309)+13849)#65536,BALLS(I,"xv")=(SEED#300)-150
+ S SEED=((SEED*1309)+13849)#65536,BALLS(I,"yv")=(SEED#300)-150
+ Q
+BSTEP ; advance every ball one tick
+ F I=1:1:BALLCT D BMOVE
+ Q
+BMOVE ; move ball I, bounce off the [0,500] box walls
+ S X=BALLS(I,"x"),Y=BALLS(I,"y")
+ S XV=BALLS(I,"xv"),YV=BALLS(I,"yv")
+ S BNCD=0
+ S X=X+XV,Y=Y+YV
+ I X>500 S X=500,AX=$S(XV<0:0-XV,1:XV),XV=0-AX,BNCD=1
+ I X<0 S X=0,AX=$S(XV<0:0-XV,1:XV),XV=AX,BNCD=1
+ I Y>500 S Y=500,AX=$S(YV<0:0-YV,1:YV),YV=0-AX,BNCD=1
+ I Y<0 S Y=0,AX=$S(YV<0:0-YV,1:YV),YV=AX,BNCD=1
+ S BALLS(I,"x")=X,BALLS(I,"y")=Y
+ S BALLS(I,"xv")=XV,BALLS(I,"yv")=YV
+ I BNCD S BOUNCS=BOUNCS+1
+ Q
+VERIFY ;
+ S OK=RSLT=1331
+ Q
