@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  *)
  
-module Main [level=2]
+module Main [level=3]
 import Run
 import I := som.Vector(integer)
 

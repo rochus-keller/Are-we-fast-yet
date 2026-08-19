@@ -23,7 +23,7 @@
  
 module Run [level=3]
 
-import B := Benchmark, Input, Out, 
+import B := Benchmark, Time, Out, 
 			Bounce, Mandelbrot, Permute, List, Queens, Sieve, Storage, Towers
 			NBody, Richards, Havlak, DeltaBlue, Json, CD
 
@@ -107,10 +107,10 @@ begin
 end printTotal
 
 proc Run.measure(bench : ^B.Benchmark) : boolean
-    var startTime, endTime, runTime : integer
+    var startTime, endTime : uint64; runTime: integer
     	innerBenchmarkLoop : procedure(me: ^B.Benchmark; innerIterations: integer): boolean
 begin
-    startTime := Input.Time()
+    startTime := Time.Ticks()
     innerBenchmarkLoop := bench.innerBenchmarkLoop
     if innerBenchmarkLoop = nil then
     	innerBenchmarkLoop := B.innerBenchmarkLoop
@@ -118,8 +118,8 @@ begin
     if not innerBenchmarkLoop(bench, self.innerIterations) then
         return false
     end
-    endTime := Input.Time()
-    runTime := endTime - startTime
+    endTime := Time.Ticks()
+    runTime := val(integer,endTime - startTime)
     self.printResult(runTime)
     self.total := self.total + runTime
     return true

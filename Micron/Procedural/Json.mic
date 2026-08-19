@@ -199,12 +199,12 @@ end HashIndexTable_init
 
 procedure HashIndexTable_stringHash(s: ^array of char): integer
 begin
-    return sig(strlen(s) * 1402589)
+    return sigc(strlen(s) * 1402589)
 end HashIndexTable_stringHash
 
 procedure HashIndexTable_hashSlotFor(s: ^array of char): integer
 begin
-    return band(HashIndexTable_stringHash(s), sig(HASH_TABLE_SIZE - 1))
+    return band(HashIndexTable_stringHash(s), sigc(HASH_TABLE_SIZE - 1))
 end HashIndexTable_hashSlotFor
 
 procedure HashIndexTable_get(me: ^HashIndexTable; name: ^array of char): integer
@@ -447,7 +447,7 @@ end JsonValue_delete
 procedure Parser_init(me: ^Parser; const str: ^array of char)
 begin
     me.input := str
-    me.inputLen := sig(strlen(str))
+    me.inputLen := sigc(strlen(str))
     me.index := -1
     me.line := 1
     me.captureStart := -1
