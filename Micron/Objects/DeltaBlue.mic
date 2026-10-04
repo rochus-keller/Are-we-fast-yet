@@ -1,0 +1,1020 @@
+(* Copyright (c) 2026 Rochus Keller <me@rochus-keller.ch> (for Micron migration)
+ *
+ * This benchmark is derived from Mario Wolczko's Java and Smalltalk version of
+ * DeltaBlue.
+ *
+ * It is modified to use the SOM class library and Java 8 features.
+ * License details:
+ *   http://web.archive.org/web/20050825101121/http://www.sunlabs.com/people/mario/java_benchmarking/index.html
+ *)
+ 
+module DeltaBlue [level=4]
+
+import B := Benchmark
+
+type
+    DeltaBlue* = object(B.Benchmark) end
+    DeltaBluePtr* = pointer to DeltaBlue
+
+    ConstraintPtr = pointer to AbstractConstraint
+    VariablePtr = pointer to Variable;
+    
+import CV := som.Vector(ConstraintPtr)
+import VV := som.Vector(VariablePtr)
+import IC := som.Interfaces(ConstraintPtr)
+import IV := som.Interfaces(VariablePtr)
+
+const
+    FORWARD = 1
+    BACKWARD = 2
+
+    SYM_ABSOLUTE_STRONGEST = 0
+    SYM_REQUIRED = 1
+    SYM_STRONG_PREFERRED = 2
+    SYM_PREFERRED = 3
+    SYM_STRONG_DEFAULT = 4
+    SYM_DEFAULT = 5
+    SYM_WEAK_DEFAULT = 6
+    SYM_ABSOLUTE_WEAKEST = 7
+
+type
+    Strength = object
+        arithmeticValue: integer
+        symbolicValue: integer
+    end
+
+    AbstractConstraint = object
+        strength: ^Strength
+    end
+
+    UnaryConstraint = object(AbstractConstraint)
+        output: ^Variable 
+        satisfied: boolean 
+    end
+    UnaryConstraintPtr = pointer to UnaryConstraint
+
+    EditConstraint = object(UnaryConstraint) end
+    EditConstraintPtr = pointer to EditConstraint
+
+    StayConstraint = object(UnaryConstraint) end
+    StayConstraintPtr = pointer to StayConstraint
+
+    BinaryConstraint = object(AbstractConstraint)
+        v1, v2: ^Variable 
+        direction: integer
+    end
+    BinaryConstraintPtr = pointer to BinaryConstraint
+
+    EqualityConstraint = object(BinaryConstraint) end
+    EqualityConstraintPtr = pointer to EqualityConstraint
+
+    ScaleConstraint = object(BinaryConstraint)
+        scale: ^Variable  
+        offset: ^Variable 
+    end
+    ScaleConstraintPtr = pointer to ScaleConstraint
+
+    Variable = object
+        value_: integer
+        constraints: CV.Vector
+        determinedBy: ^AbstractConstraint
+        mark: integer
+        walkStrength: ^Strength
+        stay: boolean
+    end
+
+    Plan = object(CV.VectorDesc) end
+    PlanPtr = pointer to Plan
+
+    Planner = object
+        currentMark: integer
+    end
+
+var
+    strengthTable: ^array of integer
+    strengthConstants: ^array of ^Strength
+    absoluteWeakest_: ^Strength
+    required_: ^Strength
+
+procedure Strength_create(symbolicValue: integer): ^Strength
+var me: ^Strength
+begin
+    new(me)
+    me.symbolicValue := symbolicValue
+    me.arithmeticValue := strengthTable[symbolicValue]
+    return me
+end Strength_create
+
+procedure Strength_init()
+var i: integer
+begin
+    if strengthTable # nil then return end
+    new(strengthTable, 8)
+    strengthTable[0] := -10000
+    strengthTable[1] := -800
+    strengthTable[2] := -600
+    strengthTable[3] := -400
+    strengthTable[4] := -200
+    strengthTable[5] := 0
+    strengthTable[6] := 500
+    strengthTable[7] := 10000
+
+    new(strengthConstants, 8)
+    for i := 0 to 7 do
+        strengthConstants[i] := Strength_create(i)
+    end
+    absoluteWeakest_ := strengthConstants[SYM_ABSOLUTE_WEAKEST]
+    required_ := strengthConstants[SYM_REQUIRED]
+end Strength_init
+
+procedure Strength_deinit()
+var i: integer
+begin
+    for i := 0 to 7 do
+        dispose(strengthConstants[i])
+    end
+    dispose(strengthConstants)
+    strengthConstants := nil
+    dispose(strengthTable)
+    strengthTable := nil
+    absoluteWeakest_ := nil
+    required_ := nil
+end Strength_deinit
+
+procedure Strength_of(sym: integer): ^Strength
+begin
+    return strengthConstants[sym]
+end Strength_of
+
+procedure Strength.stronger(s: ^Strength): boolean
+begin
+    return self.arithmeticValue < s.arithmeticValue
+end Strength.stronger
+
+procedure Strength.weaker(s: ^Strength): boolean
+begin
+    return self.arithmeticValue > s.arithmeticValue
+end Strength.weaker
+
+procedure Strength.weakest(s: ^Strength): ^Strength
+begin
+    if s.weaker(self) then return s end
+    return self
+end Strength.weakest
+
+procedure Strength.sameAs(s: ^Strength): boolean
+begin
+    return self.arithmeticValue = s.arithmeticValue
+end Strength.sameAs
+
+procedure Constraint_eq(const lhs, rhs: ^ConstraintPtr): boolean
+begin
+    return lhs^ = rhs^
+end Constraint_eq
+
+procedure^ Planner.incrementalAdd(c: ^AbstractConstraint)
+procedure^ Planner.incrementalRemove(c: ^AbstractConstraint)
+procedure^ Planner.addPropagate(c: ^AbstractConstraint; mark: integer): boolean
+
+procedure AbstractConstraint.isSatisfied(): boolean
+begin
+    assert(false) 
+    return false
+end isSatisfied
+
+procedure AbstractConstraint.addToGraph()
+begin
+    assert(false) 
+end addToGraph
+
+procedure AbstractConstraint.removeFromGraph()
+begin
+    assert(false) 
+end removeFromGraph
+
+procedure AbstractConstraint.chooseMethod(mark: integer): integer
+begin
+    assert(false) 
+    return 0
+end chooseMethod
+
+procedure AbstractConstraint.execute()
+begin
+    assert(false) 
+end execute
+
+procedure AbstractConstraint.inputsDo(fn: IV.ForEachPtr)
+begin
+    assert(false) 
+end inputsDo
+
+procedure AbstractConstraint.inputsHasOne(fn: IV.TestPtr): boolean
+begin
+    assert(false) 
+    return false
+end inputsHasOne
+
+procedure AbstractConstraint.markUnsatisfied()
+begin
+    assert(false) 
+end markUnsatisfied
+
+procedure AbstractConstraint.getOutput(): ^Variable
+begin
+    assert(false) 
+    return nil
+end getOutput
+
+procedure AbstractConstraint.recalculate()
+begin
+    assert(false) 
+end recalculate
+
+procedure AbstractConstraint.isInput(): boolean
+begin
+    return false
+end isInput
+
+procedure AbstractConstraint.getStrength(): ^Strength
+begin
+    return self.strength
+end getStrength
+
+procedure AbstractConstraint.inputsKnown(mark: integer): boolean
+type
+    Iter = object(IV.Test) mark: integer end
+
+    procedure Iter.test(const value: ^VariablePtr): boolean
+    var v: ^Variable
+    begin
+        v := value^
+        if (v.mark = self.mark) or v.stay or (v.determinedBy = nil) then
+            return false
+        end
+        return true
+    end Iter.test
+
+var iter: Iter
+begin
+    iter.mark := mark
+    if self.inputsHasOne(@iter) then
+        return false
+    end
+    return true
+end AbstractConstraint.inputsKnown
+
+procedure AbstractConstraint.addConstraint(planner: ^Planner)
+begin
+    self.addToGraph()
+    planner.incrementalAdd(self)
+end AbstractConstraint.addConstraint
+
+procedure AbstractConstraint.destroyConstraint(planner: ^Planner)
+begin
+    if self.isSatisfied() then
+        planner.incrementalRemove(self)
+    end
+    self.removeFromGraph()
+end AbstractConstraint.destroyConstraint
+
+procedure AbstractConstraint.satisfy(mark: integer; planner: ^Planner): ^AbstractConstraint
+type
+    Iter = object(IV.ForEach) mark: integer end
+
+    procedure Iter.apply(const value: ^VariablePtr)
+    var v: ^Variable
+    begin
+        v := value^
+        v.mark := self.mark
+    end Iter.apply
+
+var overridden: ^AbstractConstraint; out: ^Variable; it: Iter
+begin
+    overridden := nil
+    self.chooseMethod(mark)
+
+    if self.isSatisfied() then
+        // mark inputs to allow cycle detection in addPropagate
+        it.mark := mark
+        self.inputsDo(@it)
+
+        out := self.getOutput()
+        overridden := out.determinedBy
+        if overridden # nil then
+            overridden.markUnsatisfied()
+        end
+        out.determinedBy := self
+        if not planner.addPropagate(self, mark) then
+            assert(false) // "Cycle encountered"
+        end
+        out.mark := mark
+    else
+        overridden := nil
+        if self.strength.sameAs(required_) then
+            assert(false) // "Could not satisfy a required constraint"
+        end
+    end
+    return overridden
+end AbstractConstraint.satisfy
+
+
+procedure Variable_create(): ^Variable
+var me: ^Variable
+begin
+    new(me)
+    me.value_ := 0
+    me.constraints := CV.createDefault()
+    me.determinedBy := nil
+    me.walkStrength := absoluteWeakest_
+    me.stay := true
+    me.mark := 0
+    return me
+end Variable_create
+
+procedure Variable.dispose()
+begin
+    self.constraints.free()
+    dispose(self)
+end Variable.dispose
+
+procedure Variable_value(aValue: integer): ^Variable
+var v: ^Variable
+begin
+    v := Variable_create()
+    v.value_ := aValue
+    return v
+end Variable_value
+
+procedure Variable.addConstraint(c: ^AbstractConstraint)
+begin
+    self.constraints.append(@c)
+end Variable.addConstraint
+
+procedure Variable.removeConstraint(c: ^AbstractConstraint)
+begin
+    self.constraints.remove(@c, Constraint_eq)
+    if self.determinedBy = c then
+        self.determinedBy := nil
+    end
+end Variable.removeConstraint
+
+
+procedure UnaryConstraint_init(me: ^UnaryConstraint; v: ^Variable; strength: integer; planner: ^Planner)
+begin
+    me.strength := Strength_of(strength)
+    me.output := v
+    me.satisfied := false
+    me.addConstraint(planner)
+end UnaryConstraint_init
+
+procedure UnaryConstraint.isSatisfied(): boolean
+begin
+    return self.satisfied
+end UnaryConstraint.isSatisfied
+
+procedure UnaryConstraint.addToGraph()
+begin
+    self.output.addConstraint(self)
+    self.satisfied := false
+end UnaryConstraint.addToGraph
+
+procedure UnaryConstraint.removeFromGraph()
+begin
+    if self.output # nil then
+        self.output.removeConstraint(self)
+    end
+    self.satisfied := false
+end UnaryConstraint.removeFromGraph
+
+procedure UnaryConstraint.execute()
+begin
+    // do nothing
+end UnaryConstraint.execute
+
+procedure UnaryConstraint.chooseMethod(mark: integer): integer
+begin
+    self.satisfied := (self.output.mark # mark) and self.strength.stronger(self.output.walkStrength)
+    return 0
+end UnaryConstraint.chooseMethod
+
+procedure UnaryConstraint.inputsDo(fn: IV.ForEachPtr)
+begin
+    // I have no input variables
+end UnaryConstraint.inputsDo
+
+procedure UnaryConstraint.inputsHasOne(fn: IV.TestPtr): boolean
+begin
+    return false
+end UnaryConstraint.inputsHasOne
+
+procedure UnaryConstraint.markUnsatisfied()
+begin
+    self.satisfied := false
+end UnaryConstraint.markUnsatisfied
+
+procedure UnaryConstraint.getOutput(): ^Variable
+begin
+    return self.output
+end UnaryConstraint.getOutput
+
+procedure UnaryConstraint.recalculate()
+begin
+    self.output.walkStrength := self.strength
+    self.output.stay := not self.isInput()
+    if self.output.stay then
+        self.execute() // stay optimization
+    end
+end UnaryConstraint.recalculate
+
+
+procedure EditConstraint_create(v: ^Variable; strength: integer; planner: ^Planner): ^AbstractConstraint
+var me: EditConstraintPtr
+begin
+    new(me)
+    UnaryConstraint_init(me, v, strength, planner)
+    return me
+end EditConstraint_create
+
+procedure EditConstraint.isInput(): boolean
+begin
+    return true
+end EditConstraint.isInput
+
+procedure EditConstraint.execute()
+begin
+    // Edit constraints do nothing
+end EditConstraint.execute
+
+
+procedure StayConstraint_create(v: ^Variable; strength: integer; planner: ^Planner): ^AbstractConstraint
+var me: StayConstraintPtr
+begin
+    new(me)
+    UnaryConstraint_init(me, v, strength, planner)
+    return me
+end StayConstraint_create
+
+procedure StayConstraint.execute()
+begin
+    // Stay constraints do nothing
+end StayConstraint.execute
+
+
+procedure BinaryConstraint_init(me: ^BinaryConstraint; var1, var2: ^Variable; strength: integer; planner: ^Planner)
+begin
+    me.strength := Strength_of(strength)
+    me.v1 := var1
+    me.v2 := var2
+    me.direction := 0
+end BinaryConstraint_init
+
+procedure BinaryConstraint.isSatisfied(): boolean
+begin
+    return self.direction # 0
+end BinaryConstraint.isSatisfied
+
+procedure BinaryConstraint.addToGraph()
+begin
+    self.v1.addConstraint(self)
+    self.v2.addConstraint(self)
+    self.direction := 0
+end BinaryConstraint.addToGraph
+
+procedure BinaryConstraint.removeFromGraph()
+begin
+    if self.v1 # nil then self.v1.removeConstraint(self) end
+    if self.v2 # nil then self.v2.removeConstraint(self) end
+    self.direction := 0
+end BinaryConstraint.removeFromGraph
+
+procedure BinaryConstraint.execute()
+begin
+    // do nothing
+end BinaryConstraint.execute
+
+procedure BinaryConstraint.chooseMethod(mark: integer): integer
+begin
+    if self.v1.mark = mark then
+        if (self.v2.mark # mark) and self.strength.stronger(self.v2.walkStrength) then
+            self.direction := FORWARD
+        else
+            self.direction := 0
+        end
+        return self.direction
+    end
+    if self.v2.mark = mark then
+        if (self.v1.mark # mark) and self.strength.stronger(self.v1.walkStrength) then
+            self.direction := BACKWARD
+        else
+            self.direction := 0
+        end
+        return self.direction
+    end
+    // If we get here, neither variable is marked, so we have a choice.
+    if self.v1.walkStrength.weaker(self.v2.walkStrength) then
+        if self.strength.stronger(self.v1.walkStrength) then
+            self.direction := BACKWARD
+        else
+            self.direction := 0
+        end
+    else
+        if self.strength.stronger(self.v2.walkStrength) then
+            self.direction := FORWARD
+        else
+            self.direction := 0
+        end
+    end
+    return self.direction
+end BinaryConstraint.chooseMethod
+
+procedure BinaryConstraint.inputsDo(fn: IV.ForEachPtr)
+begin
+    if self.direction = FORWARD then
+        fn.apply(@self.v1)
+    else
+        fn.apply(@self.v2)
+    end
+end BinaryConstraint.inputsDo
+
+procedure BinaryConstraint.inputsHasOne(fn: IV.TestPtr): boolean
+begin
+    if self.direction = FORWARD then
+        return fn.test(@self.v1)
+    else
+        return fn.test(@self.v2)
+    end
+end BinaryConstraint.inputsHasOne
+
+procedure BinaryConstraint.markUnsatisfied()
+begin
+    self.direction := 0
+end BinaryConstraint.markUnsatisfied
+
+procedure BinaryConstraint.getOutput(): ^Variable
+begin
+    if self.direction = FORWARD then return self.v2
+    else return self.v1 end
+end BinaryConstraint.getOutput
+
+procedure BinaryConstraint.recalculate()
+var in_, out: ^Variable
+begin
+    if self.direction = FORWARD then
+        in_ := self.v1; out := self.v2
+    else
+        in_ := self.v2; out := self.v1
+    end
+    out.walkStrength := self.strength.weakest(in_.walkStrength)
+    out.stay := in_.stay
+    if out.stay then
+        self.execute()
+    end
+end BinaryConstraint.recalculate
+
+
+procedure EqualityConstraint_create(var1, var2: ^Variable; strength: integer; planner: ^Planner): ^AbstractConstraint
+var me: EqualityConstraintPtr
+begin
+    new(me)
+    BinaryConstraint_init(me, var1, var2, strength, planner)
+    me.addConstraint(planner)
+    return me
+end EqualityConstraint_create
+
+procedure EqualityConstraint.execute()
+begin
+    if self.direction = FORWARD then
+        self.v2.value_ := self.v1.value_
+    else
+        self.v1.value_ := self.v2.value_
+    end
+end EqualityConstraint.execute
+
+
+procedure ScaleConstraint_create(src, scaleV, offsetV, dest: ^Variable; strength: integer;
+                                 planner: ^Planner): ^AbstractConstraint
+var me: ScaleConstraintPtr
+begin
+    new(me)
+    BinaryConstraint_init(me, src, dest, strength, planner)
+    me.scale := scaleV
+    me.offset := offsetV
+    me.addConstraint(planner)
+    return me
+end ScaleConstraint_create
+
+procedure ScaleConstraint.addToGraph()
+begin
+    self.v1.addConstraint(self)
+    self.v2.addConstraint(self)
+    self.scale.addConstraint(self)
+    self.offset.addConstraint(self)
+    self.direction := 0
+end ScaleConstraint.addToGraph
+
+procedure ScaleConstraint.removeFromGraph()
+begin
+    if self.v1 # nil then self.v1.removeConstraint(self) end
+    if self.v2 # nil then self.v2.removeConstraint(self) end
+    if self.scale # nil then self.scale.removeConstraint(self) end
+    if self.offset # nil then self.offset.removeConstraint(self) end
+    self.direction := 0
+end ScaleConstraint.removeFromGraph
+
+procedure ScaleConstraint.execute()
+begin
+    if self.direction = FORWARD then
+        self.v2.value_ := self.v1.value_ * self.scale.value_ + self.offset.value_
+    else
+        self.v1.value_ := (self.v2.value_ - self.offset.value_) div self.scale.value_
+    end
+end ScaleConstraint.execute
+
+procedure ScaleConstraint.inputsDo(fn: IV.ForEachPtr)
+begin
+    if self.direction = FORWARD then
+        fn.apply(@self.v1)
+        fn.apply(@self.scale)
+        fn.apply(@self.offset)
+    else
+        fn.apply(@self.v2)
+        fn.apply(@self.scale)
+        fn.apply(@self.offset)
+    end
+end ScaleConstraint.inputsDo
+
+procedure ScaleConstraint.recalculate()
+var in_, out: ^Variable
+begin
+    if self.direction = FORWARD then
+        in_ := self.v1; out := self.v2
+    else
+        out := self.v1; in_ := self.v2
+    end
+    out.walkStrength := self.strength.weakest(in_.walkStrength)
+    out.stay := in_.stay and self.scale.stay and self.offset.stay
+    if out.stay then
+        self.execute() // stay optimization
+    end
+end ScaleConstraint.recalculate
+
+
+procedure Plan_create(): PlanPtr
+var me: PlanPtr
+begin
+    new(me)
+    me.expand(15)
+    return me
+end Plan_create
+
+procedure Plan.execute()
+var i: integer; c: ^AbstractConstraint
+begin
+    for i := 0 to self.size() - 1 do
+        c := self.at(i)^
+        c.execute()
+    end
+end Plan.execute
+
+
+procedure Planner_create(): ^Planner
+var me: ^Planner
+begin
+    new(me)
+    me.currentMark := 1
+    return me
+end Planner_create
+
+procedure Planner.newMark(): integer
+begin
+    inc(self.currentMark)
+    return self.currentMark
+end Planner.newMark
+
+procedure Planner.incrementalAdd(c: ^AbstractConstraint)
+var mark: integer; overridden: ^AbstractConstraint
+begin
+    mark := self.newMark()
+    overridden := c.satisfy(mark, self)
+    while overridden # nil do
+        overridden := overridden.satisfy(mark, self)
+    end
+end Planner.incrementalAdd
+
+procedure Planner.addConstraintsConsumingTo(v: ^Variable; coll: CV.Vector)
+var i: integer; c, determiningC: ^AbstractConstraint
+begin
+    determiningC := v.determinedBy
+    for i := 0 to v.constraints.size() - 1 do
+        c := v.constraints.at(i)^
+        if (c # determiningC) and c.isSatisfied() then
+            coll.append(@c)
+        end
+    end
+end Planner.addConstraintsConsumingTo
+
+procedure Planner.constraintsConsuming(v: ^Variable; fn: IC.ForEachPtr)
+var i: integer; c, determiningC: ^AbstractConstraint
+begin
+    determiningC := v.determinedBy
+    for i := 0 to v.constraints.size() - 1 do
+        c := v.constraints.at(i)^
+        if (c # determiningC) and c.isSatisfied() then
+            fn.apply(@c)
+        end
+    end
+end Planner.constraintsConsuming
+
+procedure Planner.removePropagateFrom(out: ^Variable; unsatisfied: CV.Vector)
+type
+    Iter = object(IC.ForEach) todo: VV.Vector end
+
+    procedure Iter.apply(const value: ^ConstraintPtr)
+    var c: ^AbstractConstraint; v: ^Variable
+    begin
+        c := value^
+        c.recalculate()
+        v := c.getOutput()
+        self.todo.append(@v)
+    end Iter.apply
+
+type
+    Sorter = object(IC.Comparator) end
+
+    procedure Sorter.compare(const lhs, rhs: ^ConstraintPtr): integer
+    begin
+        if lhs^.getStrength().stronger(rhs^.getStrength()) then return -1
+        else return 1 end
+    end Sorter.compare
+
+var todo: VV.Vector; v: ^Variable; i: integer; c: ^AbstractConstraint
+    it: Iter; sorter: Sorter
+begin
+    out.determinedBy := nil
+    out.walkStrength := absoluteWeakest_
+    out.stay := true
+
+    todo := VV.createDefault()
+    todo.append(@out)
+    it.todo := todo
+
+    while not todo.isEmpty() do
+        v := todo.removeFirst()^
+        for i := 0 to v.constraints.size() - 1 do
+            c := v.constraints.at(i)^
+            if not c.isSatisfied() then
+                unsatisfied.append(@c)
+            end
+        end
+        self.constraintsConsuming(v, @it)
+    end
+    todo.free()
+
+    unsatisfied.sort(@sorter)
+end Planner.removePropagateFrom
+
+procedure Planner.incrementalRemove(c: ^AbstractConstraint)
+var out: ^Variable; unsatisfied: CV.Vector; i: integer; cc: ^AbstractConstraint
+begin
+    out := c.getOutput()
+    c.markUnsatisfied()
+    c.removeFromGraph()
+
+    unsatisfied := CV.createDefault()
+    self.removePropagateFrom(out, unsatisfied)
+    for i := 0 to unsatisfied.size() - 1 do
+        cc := unsatisfied.at(i)^
+        self.incrementalAdd(cc)
+    end
+    unsatisfied.free()
+end Planner.incrementalRemove
+
+procedure Planner.addPropagate(c: ^AbstractConstraint; mark: integer): boolean
+var todo: CV.Vector; d: ^AbstractConstraint
+begin
+    todo := CV.createDefault()
+    todo.append(@c)
+
+    while not todo.isEmpty() do
+        d := todo.removeFirst()^
+        if d.getOutput().mark = mark then
+            self.incrementalRemove(c)
+            todo.free()
+            return false
+        end
+        d.recalculate()
+        self.addConstraintsConsumingTo(d.getOutput(), todo)
+    end
+    todo.free()
+    return true
+end Planner.addPropagate
+
+procedure Planner.makePlan(sources: CV.Vector): PlanPtr
+var mark: integer; plan: PlanPtr; todo: CV.Vector; c: ^AbstractConstraint
+begin
+    mark := self.newMark()
+    plan := Plan_create()
+    todo := CV.copy(sources)
+
+    while not todo.isEmpty() do
+        c := todo.removeFirst()^
+        if (c.getOutput().mark # mark) and c.inputsKnown(mark) then
+            // not in plan already and eligible for inclusion
+            plan.append(@c)
+            c.getOutput().mark := mark
+            self.addConstraintsConsumingTo(c.getOutput(), todo)
+        end
+    end
+    todo.free()
+    return plan
+end Planner.makePlan
+
+procedure Planner.extractPlanFromConstraints(constraints: CV.Vector): PlanPtr
+var sources: CV.Vector; i: integer; c: ^AbstractConstraint; res: PlanPtr
+begin
+    sources := CV.createDefault()
+    for i := 0 to constraints.size() - 1 do
+        c := constraints.at(i)^
+        if c.isInput() and c.isSatisfied() then
+            sources.append(@c)
+        end
+    end
+    res := self.makePlan(sources)
+    sources.free()
+    return res
+end Planner.extractPlanFromConstraints
+
+procedure Planner.change(v: ^Variable; newValue: integer)
+var editC: ^AbstractConstraint; editV: CV.Vector; plan: PlanPtr; i: integer
+begin
+    editC := EditConstraint_create(v, SYM_PREFERRED, self)
+    editV := CV.createDefault()
+    editV.append(@editC)
+    plan := self.extractPlanFromConstraints(editV)
+    for i := 0 to 9 do
+        v.value_ := newValue
+        plan.execute()
+    end
+    editC.destroyConstraint(self)
+    dispose(editC)
+    editV.free()
+    plan.free()
+end Planner.change
+
+procedure chainTest(n: integer)
+var planner: ^Planner; toDeleteV: CV.Vector; varsLen, i: integer
+    vars: VV.Vector; tmp, editC: ^AbstractConstraint; v, v1, v2: ^Variable
+    editV: CV.Vector; plan: PlanPtr
+begin
+    planner := Planner_create()
+    toDeleteV := CV.createDefault()
+    varsLen := n + 1
+    vars := VV.create(varsLen)
+
+    for i := 0 to varsLen - 1 do
+        v := Variable_create()
+        vars.atPut(i, @v)
+    end
+
+    // Build chain of n equality constraints
+    for i := 0 to n - 1 do
+        v1 := vars.at(i)^
+        v2 := vars.at(i + 1)^
+        tmp := EqualityConstraint_create(v1, v2, SYM_REQUIRED, planner)
+        toDeleteV.append(@tmp)
+    end
+
+    v := vars.at(n)^
+    tmp := StayConstraint_create(v, SYM_STRONG_DEFAULT, planner)
+    toDeleteV.append(@tmp)
+    v := vars.at(0)^
+    editC := EditConstraint_create(v, SYM_PREFERRED, planner)
+    toDeleteV.append(@editC)
+
+    editV := CV.createDefault()
+    editV.append(@editC)
+    plan := planner.extractPlanFromConstraints(editV)
+
+    for i := 0 to 99 do
+        v := vars.at(0)^
+        v.value_ := i
+        plan.execute()
+        v := vars.at(n)^
+        if v.value_ # i then
+            assert(false) 
+        end
+    end
+
+    editC.destroyConstraint(planner)
+
+    for i := 0 to vars.size() - 1 do
+        vars.at(i)^.dispose()
+    end
+
+    for i := 0 to toDeleteV.size() - 1 do
+        dispose(toDeleteV.at(i)^)
+    end
+
+    plan.free()
+    dispose(planner)
+    toDeleteV.free()
+    editV.free()
+    vars.free()
+end chainTest
+
+procedure projectionTest(n: integer)
+var planner: ^Planner; dests: VV.Vector; toDelete: VV.Vector; toDelete2: CV.Vector
+    scaleV, offsetV, src, dst, v: ^Variable; tmp: ^AbstractConstraint; i: integer
+begin
+    planner := Planner_create()
+    dests := VV.createDefault()
+    toDelete := VV.createDefault()
+    toDelete2 := CV.createDefault()
+
+    scaleV := Variable_value(10)
+    offsetV := Variable_value(1000)
+    toDelete.append(@scaleV)
+    toDelete.append(@offsetV)
+
+    src := nil
+    dst := nil
+    for i := 1 to n do
+        src := Variable_value(i)
+        dst := Variable_value(i)
+        toDelete.append(@src)
+        toDelete.append(@dst)
+        dests.append(@dst)
+        tmp := StayConstraint_create(src, SYM_DEFAULT, planner)
+        toDelete2.append(@tmp)
+        tmp := ScaleConstraint_create(src, scaleV, offsetV, dst, SYM_REQUIRED, planner)
+        toDelete2.append(@tmp)
+    end
+
+    planner.change(src, 17)
+    if dst.value_ # 1170 then
+        assert(false)
+    end
+
+    planner.change(dst, 1050)
+    if src.value_ # 5 then
+        assert(false) 
+    end
+
+    planner.change(scaleV, 5)
+    for i := 0 to n - 2 do
+        v := dests.at(i)^
+        if v.value_ # (i + 1) * 5 + 1000 then
+            assert(false) 
+        end
+    end
+
+    planner.change(offsetV, 2000)
+    for i := 0 to n - 2 do
+        v := dests.at(i)^
+        if v.value_ # (i + 1) * 5 + 2000 then
+            assert(false) 
+        end
+    end
+
+    for i := 0 to toDelete.size() - 1 do
+        toDelete.at(i)^.dispose()
+    end
+    for i := 0 to toDelete2.size() - 1 do
+        dispose(toDelete2.at(i)^)
+    end
+
+    dispose(planner)
+    dests.free()
+    toDelete.free()
+    toDelete2.free()
+end projectionTest
+
+procedure DeltaBlue.innerBenchmarkLoop*(innerIterations: integer): boolean
+begin
+    Strength_init()
+    chainTest(innerIterations)
+    projectionTest(innerIterations)
+    Strength_deinit()
+    return true
+end innerBenchmarkLoop
+
+procedure DeltaBlue.benchmark*(): integer
+begin
+    assert(false) // Should never be reached
+    return 0
+end benchmark
+
+procedure DeltaBlue.verifyResult*(result: integer): boolean
+begin
+    assert(false) // Should never be reached
+    return false
+end verifyResult
+
+procedure create*(): B.BenchmarkPtr
+var bench: DeltaBluePtr
+begin
+    new(bench)
+    return bench
+end create
+
+end DeltaBlue

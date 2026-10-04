@@ -15,7 +15,7 @@ as type-bound procedure types (i.e. "delegates"). The latter support a "hybrid"
 programming approach between procedural and object-oriented, similar to the Go
 programming language, but much leaner and less confusing.
 
-So far, there are three implementations of the benchmark suite. One is using plain
+There are four implementations of the benchmark suite. One is using plain
 procedural style with code directly migrated from the C version of the benchmark suite.
 The second one is using a hybrid style which resembles the C++ implementation to a certain
 degree, but the use of delegates to emulate the closures and iterators of the 
@@ -24,6 +24,10 @@ implementation based on inheritance and virtual methods found in C++.
 The third is based on the hybrid version, but uses an interface to represent the 
 benchmark instead of the Oberon style record with procedure type members; the result
 is more elegant with even less boiler-plate and casts, and all on language level 3 and below.
+The fourth is using the object-oriented features of Micron on language level 4. It uses 
+object types, inheritance, dynamically dispatched type-bound procedures, IS relations, type guards 
+and type case. It faithfully follows the C++ version, but 
+also the original Java and Smalltalk versions were consulted.
 
 This benchmark suite implementation is therefore a good case study for examining 
 the different programming styles that Micron supports, even for low-level programming.

@@ -1,0 +1,21 @@
+module Simple [level=4]
+import B := Benchmark, Bounce, List, Mandelbrot, NBody, Permute, Queens, Sieve, Storage, Towers
+
+proc check(const name: ^[]char; b: B.BenchmarkPtr; inner: integer)
+begin
+  print(name)
+  if b.innerBenchmarkLoop(inner) then println(" ok") else println(" FAILED") end
+  b.deinit()
+  dispose(b)
+end check
+begin
+  check("Bounce", Bounce.create(), 1)
+  check("List", List.create(), 1)
+  check("Mandelbrot", Mandelbrot.create(), 1)
+  check("NBody", NBody.create(), 1)
+  check("Permute", Permute.create(), 1)
+  check("Queens", Queens.create(), 1)
+  check("Sieve", Sieve.create(), 1)
+  check("Storage", Storage.create(), 1)
+  check("Towers", Towers.create(), 1)
+end Simple

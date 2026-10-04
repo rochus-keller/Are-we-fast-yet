@@ -1,0 +1,79 @@
+(* This code is derived from the SOM benchmarks, see AUTHORS.md file.
+ *
+ * Copyright (c) 2024 Rochus Keller <me@rochus-keller.ch> (for Micron migration)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the 'Software'), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *)
+ 
+module Permute [level=4]
+ 
+import B := Benchmark
+
+type 
+	Permute* = object(B.Benchmark)
+				count: integer
+				v: pointer to array of integer
+			end
+	PermutePtr* = pointer to Permute
+			
+	proc Permute.swap(i,j: integer)
+	var tmp: integer
+	begin
+		tmp := self.v[i]
+		self.v[i] := self.v[j]
+		self.v[j] := tmp
+	end swap
+	
+	proc Permute.permute(n: integer)
+	var n1, i: integer
+	begin
+		inc(self.count)
+		if n # 0 then
+		    n1 := n - 1
+		    self.permute(n1)
+		    for i := n1 to 0 by -1 do
+		        self.swap(n1, i)
+		        self.permute(n1)
+		        self.swap(n1, i)
+		    end
+		end
+    end permute
+    
+    proc Permute.benchmark(): integer
+	begin
+		self.count := 0
+		new(self.v, 6)
+		self.permute(6)
+		dispose(self.v)
+		return self.count
+	end benchmark
+	
+	proc Permute.verifyResult(result: integer): boolean
+	begin
+  		return result = 8660
+	end verifyResult
+
+	proc create*(): B.BenchmarkPtr
+	var per: PermutePtr
+	begin
+		new(per)
+		return per
+   	end create
+
+ end Permute
